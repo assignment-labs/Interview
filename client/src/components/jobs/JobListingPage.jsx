@@ -52,7 +52,7 @@ const JobListingPage = () => {
       
       const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
       
-      const response = await axios.get(`/api/jobs${queryString}`);
+      const response = await axios.get(`http://localhost:5000/api/jobs${queryString}`);
       
       if (response.data.success) {
         setJobs(response.data.data || []);

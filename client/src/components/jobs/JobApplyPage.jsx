@@ -1,7 +1,7 @@
 // src/pages/JobApplyPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../utils/apiUtils'; // Import the api utility instead of axios directly
 
 const JobApplyPage = () => {
   const { id } = useParams();
@@ -35,26 +35,20 @@ const JobApplyPage = () => {
       return;
     }
 
-    fetchJobDetails(token);
+    fetchJobDetails();
   }, [id, navigate]);
 
-  const fetchJobDetails = async (token) => {
+  const fetchJobDetails = async () => {
     try {
-      // Fetch job details
-      const jobResponse = await axios.get(`http://localhost:5000/api/jobs/${id}`);
+      // Fetch job details using the api utility
+      const jobResponse = await api.get(`/jobs/${id}`);
       
       if (jobResponse.data.success) {
         setJob(jobResponse.data.data);
       }
 
       // Check if user has already applied
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
-
-      const applicationsResponse = await axios.get('http://localhost:5000/api/applications/me', config);
+      const applicationsResponse = await api.get('/applications/me');
       
       if (applicationsResponse.data.success) {
         const hasApplied = applicationsResponse.data.data.some(
@@ -99,28 +93,14 @@ const JobApplyPage = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        setError('You must be logged in to apply for a job');
-        setSubmitting(false);
-        return;
-      }
-
       // For this implementation, we'll just send the cover letter
       // In a real application, you'd need to handle file upload for the resume
       const applicationData = {
         coverLetter: formData.coverLetter
       };
 
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        }
-      };
-
-      const response = await axios.post(`http://localhost:5000/api/applications/${id}`, applicationData, config);
+      // Use the api utility to handle authentication automatically
+      const response = await api.post(`/applications/${id}`, applicationData);
       
       setSubmitting(false);
       

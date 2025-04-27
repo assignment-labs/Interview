@@ -1,7 +1,7 @@
-// src/components/jobs/JobDetailPage.jsx
+// This is a completely different approach that bypasses the problematic endpoint
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../utils/apiUtils';
 
 const JobDetailPage = () => {
   const { id } = useParams();
@@ -11,6 +11,7 @@ const JobDetailPage = () => {
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [saveInProgress, setSaveInProgress] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -24,8 +25,7 @@ const JobDetailPage = () => {
 
   const fetchJobDetails = async () => {
     try {
-      // Use relative URL instead of hardcoded URL
-      const response = await axios.get(`http://localhost:5000/api/jobs/${id}`);
+      const response = await api.get(`/jobs/${id}`);
       
       if (response.data.success) {
         setJob(response.data.data);
@@ -38,56 +38,61 @@ const JobDetailPage = () => {
   };
 
   const checkIfJobIsSaved = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!user) return;
 
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
-
-      // Use relative URL
-      const response = await axios.get('http://localhost:5000/api/jobs/saved', config);
+      const response = await api.get('/jobs/saved');
       
       if (response.data.success) {
-        const saved = response.data.data.some(savedJob => savedJob._id === id);
-        setIsSaved(saved);
+        // Extract just the job IDs from the saved jobs list
+        const savedJobIds = response.data.data.map(job => job._id);
+        // Check if the current job ID is in the list
+        setIsSaved(savedJobIds.includes(id));
       }
     } catch (err) {
       console.error('Error checking saved status:', err);
     }
   };
 
-  const handleSaveJob = async () => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+// This function will correctly save and unsave jobs based on your backend API
+const handleSaveJob = async () => {
+  if (!user) {
+    navigate('/login');
+    return;
+  }
 
-    const token = localStorage.getItem('token');
+  try {
+    // Toggle the UI state for immediate feedback
+    const newSavedState = !isSaved;
+    setIsSaved(newSavedState);
+
+    if (newSavedState) {
+      // Save the job - using the exact endpoint from your routes/jobs.js
+      await api.post(`/jobs/saved/${id}`);
+      console.log('Job saved successfully');
+    } else {
+      // Unsave the job - using the exact endpoint from your routes/jobs.js
+      await api.delete(`/jobs/saved/${id}`);
+      console.log('Job unsaved successfully');
+    }
+  } catch (err) {
+    console.error('Error saving/unsaving job:', err);
     
-    try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
-
-      if (isSaved) {
-        // Remove from saved jobs - use relative URL
-        await axios.delete(`http://localhost:5000/api/jobs/saved/${id}`, config);
-        setIsSaved(false);
-      } else {
-        // Add to saved jobs - use relative URL
-        await axios.post(`http://localhost:5000/api/jobs/saved/${id}`, {}, config);
-        setIsSaved(true);
-      }
-    } catch (err) {
-      console.error('Error saving/unsaving job:', err);
+    // Revert the UI state if the API call failed
+    setIsSaved(isSaved); // Revert to the previous state
+    
+    // Show error message
+    setError(err.response?.data?.message || 'Failed to update saved status. Please try again.');
+    setTimeout(() => setError(''), 5000);
+    
+    // If the error is "already saved" and we were trying to save, update the UI
+    if (err.response?.status === 400 && 
+        err.response?.data?.message === 'Job is already saved' &&
+        !isSaved) {
+      setIsSaved(true);
     }
-  };
+  }
+};
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not specified';
@@ -167,14 +172,16 @@ const JobDetailPage = () => {
                 </div>
               </div>
               <div className="flex space-x-3">
-                <button
-                  onClick={handleSaveJob}
-                  className={`flex items-center justify-center h-10 w-10 rounded-full ${
-                    isSaved ? 'bg-white text-blue-600' : 'bg-blue-500 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  <i className={`fas fa-bookmark ${isSaved ? 'text-blue-600' : 'text-white'}`}></i>
-                </button>
+                {user && (
+                  <button
+                    onClick={handleSaveJob}
+                    className={`flex items-center justify-center h-10 w-10 rounded-full ${
+                      isSaved ? 'bg-white text-blue-600' : 'bg-blue-500 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    <i className={`fas fa-bookmark ${isSaved ? 'text-blue-600' : 'text-white'}`}></i>
+                  </button>
+                )}
               </div>
             </div>
             

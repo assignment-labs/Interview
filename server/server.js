@@ -50,7 +50,7 @@ app.use('/api/stats', require('./routes/stats'));
 app.use('/api/interviews', require('./routes/interviews')); // Added for interview mocker
 
 // Add the job scraper routes
-app.use('/api', require('./routes/jobScraperRoutes'));
+app.use('/api/scraper', require('./routes/jobScraperRoutes'));
 
 // Basic route for testing API
 app.get('/api/test', (req, res) => {

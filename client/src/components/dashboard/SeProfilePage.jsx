@@ -1,7 +1,7 @@
 // src/components/profile/ProfilePage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../utils/apiUtils'; // Import the api utility instead of axios directly
 
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
@@ -35,9 +35,8 @@ const ProfilePage = () => {
   useEffect(() => {
     // Check if user is logged in
     const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
     
-    if (!storedUser || !token) {
+    if (!storedUser) {
       navigate('/login');
       return;
     }
@@ -46,21 +45,14 @@ const ProfilePage = () => {
     setUser(parsedUser);
 
     // Fetch user profile data
-    fetchProfileData(token);
+    fetchProfileData();
   }, [navigate]);
 
-  const fetchProfileData = async (token) => {
+  const fetchProfileData = async () => {
     setLoading(true);
     try {
-      // Configure axios headers with token
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
-      
-      // Fetch user profile
-      const profileResponse = await axios.get('http://localhost:5000/api/users/profile', config);
+      // Fetch user profile using the api utility
+      const profileResponse = await api.get('/users/profile');
       setUser(profileResponse.data.data);
       
       // Set image preview if user has a profile image
@@ -85,12 +77,6 @@ const ProfilePage = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
     try {
       setLoading(true);
       
@@ -118,16 +104,12 @@ const ProfilePage = () => {
         formData.append('profileImage', profileImage);
       }
       
-      // Configure headers
-      const config = {
+      // Use api utility with correct headers for multipart/form-data
+      const response = await api.put('/users/profile', formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
-      };
-      
-      // Send update request
-      const response = await axios.put('http://localhost:5000/api/users/profile', formData, config);
+      });
       
       // Update local user data
       const updatedUser = response.data.data;
@@ -147,29 +129,11 @@ const ProfilePage = () => {
   const handleAddExperience = async (e) => {
     e.preventDefault();
     
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
     try {
       setLoading(true);
       
-      // Configure headers
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      };
-      
       // Send add experience request
-      const response = await axios.put(
-        'http://localhost:5000/api/users/experience', 
-        experience,
-        config
-      );
+      const response = await api.put('/users/experience', experience);
       
       // Update user data
       setUser(response.data.data);
@@ -199,29 +163,11 @@ const ProfilePage = () => {
   const handleAddEducation = async (e) => {
     e.preventDefault();
     
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
     try {
       setLoading(true);
       
-      // Configure headers
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      };
-      
       // Send add education request
-      const response = await axios.put(
-        'http://localhost:5000/api/users/education', 
-        education,
-        config
-      );
+      const response = await api.put('/users/education', education);
       
       // Update user data
       setUser(response.data.data);
@@ -253,27 +199,11 @@ const ProfilePage = () => {
       return;
     }
     
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
     try {
       setLoading(true);
       
-      // Configure headers
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
-      
       // Send delete experience request
-      const response = await axios.delete(
-        `http://localhost:5000/api/users/experience/${expId}`,
-        config
-      );
+      const response = await api.delete(`/users/experience/${expId}`);
       
       // Update user data
       setUser(response.data.data);
@@ -293,27 +223,11 @@ const ProfilePage = () => {
       return;
     }
     
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
     try {
       setLoading(true);
       
-      // Configure headers
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
-      
       // Send delete education request
-      const response = await axios.delete(
-        `http://localhost:5000/api/users/education/${eduId}`,
-        config
-      );
+      const response = await api.delete(`/users/education/${eduId}`);
       
       // Update user data
       setUser(response.data.data);
@@ -385,13 +299,6 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      {/* <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">Your Profile</h1>
-        </div>
-      </header> */}
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {/* Messages */}
@@ -966,36 +873,6 @@ const ProfilePage = () => {
                 </div>
               )}
             </div>
-
-            {/* Resume Upload */}
-            {/* <div className="mt-10 pt-10 border-t border-gray-200">
-              <h4 className="text-base font-medium text-gray-900 mb-4">Resume</h4>
-              <div className="flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
-                  <i className="fas fa-file-upload text-gray-400 text-3xl"></i>
-                  <div className="flex text-sm text-gray-600">
-                    <label
-                      htmlFor="file-upload"
-                      className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500"
-                    >
-                      <span>Upload a file</span>
-                      <input id="file-upload" name="file-upload" type="file" className="sr-only" />
-                    </label>
-                    <p className="pl-1">or drag and drop</p>
-                  </div>
-                  <p className="text-xs text-gray-500">PDF, DOC, DOCX up to 5MB</p>
-                </div>
-              </div>
-              {user?.resume && (
-                <div className="mt-2 flex items-center text-sm text-gray-600">
-                  <i className="fas fa-file-pdf text-gray-400 mr-2"></i>
-                  <span>Current resume: resume.pdf</span>
-                  <button type="button" className="ml-2 text-red-600 hover:text-red-800">
-                    <i className="fas fa-times"></i>
-                  </button>
-                </div>
-              )}
-            </div> */}
           </div>
         </div>
       </main>
