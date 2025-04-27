@@ -1,9 +1,11 @@
-// src/pages/JobListingPage.jsx
+// src/components/jobs/JobListingPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import CVMatcher from './CVMatcher';
 
 const JobListingPage = () => {
+  const [showCVMatcher, setShowCVMatcher] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -50,7 +52,7 @@ const JobListingPage = () => {
       
       const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
       
-      const response = await axios.get(`http://localhost:5000/api/jobs${queryString}`);
+      const response = await axios.get(`/api/jobs${queryString}`);
       
       if (response.data.success) {
         setJobs(response.data.data || []);
@@ -135,8 +137,18 @@ const JobListingPage = () => {
             <h1 className="text-3xl font-bold text-gray-900">Find Jobs</h1>
             <p className="mt-1 text-gray-500">Browse through available opportunities</p>
           </div>
+          <div className="mt-4 md:mt-0">
+            <button
+              onClick={() => setShowCVMatcher(!showCVMatcher)}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              {showCVMatcher ? 'Hide CV Matcher' : 'Match Jobs to Your CV'}
+            </button>
+          </div>
         </div>
-
+        
+        {showCVMatcher && <CVMatcher />}
+        
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters */}
           <div className="lg:col-span-1">
@@ -254,7 +266,7 @@ const JobListingPage = () => {
             {/* Loading Indicator */}
             {loading ? (
               <div className="flex justify-center items-center h-64">
-                <div className="spinner">Loading...</div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
               </div>
             ) : jobs.length === 0 ? (
               <div className="bg-white shadow-md rounded-lg p-8 text-center">

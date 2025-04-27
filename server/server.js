@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -49,6 +48,9 @@ app.use('/api/applications', require('./routes/applications'));
 app.use('/api/resources', require('./routes/resources'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/interviews', require('./routes/interviews')); // Added for interview mocker
+
+// Add the job scraper routes
+app.use('/api', require('./routes/jobScraperRoutes'));
 
 // Basic route for testing API
 app.get('/api/test', (req, res) => {
