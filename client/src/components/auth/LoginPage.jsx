@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+// src/pages/LoginPage.jsx
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import axios from 'axios';
-// Import the action creator and updated api utilities
 import { loginSuccess } from '../../redux/actions/authActions';
-import api, { setAuthToken } from '../../utils/apiUtils';
+import { handleLogin, checkAuthStatus, redirectBasedOnRole } from '../../utils/authUtils';
 
 const LoginPage = () => {
   const [userType, setUserType] = useState('');
@@ -15,6 +14,25 @@ const LoginPage = () => {
   
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const verifyAuth = async () => {
+      setLoading(true);
+      const { isAuthenticated, user } = await checkAuthStatus();
+      
+      if (isAuthenticated && user) {
+        // Update Redux state
+        dispatch(loginSuccess(user));
+        
+        // Redirect based on user role
+        redirectBasedOnRole(user, navigate);
+      }
+      setLoading(false);
+    };
+    
+    verifyAuth();
+  }, [dispatch, navigate]);
 
   // Handler for selecting user type
   const handleUserTypeSelect = (type) => {
@@ -28,55 +46,41 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      // Make API call to login endpoint
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
-        email,
-        password
-      });
-
-      const { success, token, user } = response.data;
-
-      if (success && token) {
-        // Format the token with Bearer prefix
-        const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-        
-        // Store token in localStorage
-        localStorage.setItem('token', authToken);
-        localStorage.setItem('user', JSON.stringify(user));
-
-        // Set default Authorization header for all future axios requests
-        axios.defaults.headers.common['Authorization'] = authToken;
-        
-        // Set the auth token for our api instance as well
-        setAuthToken(token);
-        
-        // For debugging - log the auth header
-        console.log('Auth header set on login:', authToken);
-
+      const result = await handleLogin(email, password);
+      
+      if (result.success) {
         // Dispatch login success action
-        dispatch(loginSuccess(user));
-
+        dispatch(loginSuccess(result.user));
+        
         // Redirect based on user role
-        if (user.role === 'jobseeker') {
-          navigate('/dashboard/seeker');
-        } else {
-          navigate('/dashboard/employer');
-        }
+        redirectBasedOnRole(result.user, navigate);
+      } else {
+        setError(result.error);
       }
     } catch (err) {
-      console.error('Login failed:', err);
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      console.error('Login submission error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (loading && !userType) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="spinner">
+          <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent border-solid rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Link to="/" className="flex justify-center items-center">
           <i className="fas fa-briefcase text-blue-600 text-3xl mr-2"></i>
-          <span className="font-bold text-2xl text-blue-600">AslanAI</span>
+          <span className="font-bold text-2xl text-blue-600">JobPortal</span>
         </Link>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           {userType ? `Log in as ${userType === 'employer' ? 'Employer' : 'Job Seeker'}` : 'Log in to your account'}
@@ -188,7 +192,15 @@ const LoginPage = () => {
                     disabled={loading}
                     className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    {loading ? 'Logging in...' : 'Log in'}
+                    {loading ? (
+                      <span className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Logging in...
+                      </span>
+                    ) : 'Log in'}
                   </button>
                 </div>
                 

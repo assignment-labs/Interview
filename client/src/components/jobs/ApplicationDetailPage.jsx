@@ -14,27 +14,49 @@ const ApplicationDetailPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Get token and ensure it has the Bearer prefix
         const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        setUserRole(user.role || '');
-        
         if (!token) {
           setError('You must be logged in to view this application');
           setLoading(false);
+          navigate('/login');
           return;
         }
 
+        // Format token with Bearer prefix
+        const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+        
+        // Update token in localStorage with proper format
+        localStorage.setItem('token', formattedToken);
+        
+        // Set axios default authorization header
+        axios.defaults.headers.common['Authorization'] = formattedToken;
+
+        // Get user info
+        try {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          setUserRole(user.role || '');
+        } catch (userErr) {
+          console.error('Error parsing user data:', userErr);
+          setUserRole('');
+        }
+        
+        // Configure request headers with token
         const config = {
           headers: {
-            Authorization: `Bearer ${token}`
+            'Authorization': formattedToken
           }
         };
 
-        // Fetch application details - Using relative path instead of hardcoded URL
+        console.log('Fetching application with token:', formattedToken);
+
+        // Fetch application details
         const response = await axios.get(`http://localhost:5000/api/applications/${id}`, config);
         
         if (response.data.success) {
           setApplication(response.data.data);
+        } else {
+          setError('Could not retrieve application details.');
         }
         
       } catch (err) {
@@ -43,7 +65,9 @@ const ApplicationDetailPage = () => {
         
         // If unauthorized, redirect to login
         if (err.response?.status === 401) {
-          navigate('/login');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setTimeout(() => navigate('/login'), 1000);
         }
       } finally {
         setLoading(false);
@@ -63,23 +87,39 @@ const ApplicationDetailPage = () => {
       
       if (!token) {
         setError('You must be logged in to withdraw an application');
+        setTimeout(() => navigate('/login'), 1000);
         return;
       }
 
+      // Ensure token has Bearer prefix
+      const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+
       const config = {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': formattedToken
         }
       };
 
-      // Using relative path instead of hardcoded URL
+      // Delete application
       const response = await axios.delete(`http://localhost:5000/api/applications/${id}`, config);
       
       if (response.data.success) {
-        navigate('/dashboard/seeker?tab=applications', { state: { message: 'Application withdrawn successfully' } });
+        navigate('/dashboard/seeker?tab=applications', { 
+          state: { message: 'Application withdrawn successfully' } 
+        });
+      } else {
+        setError('Failed to withdraw application. Please try again.');
       }
     } catch (err) {
+      console.error('Error withdrawing application:', err);
       setError(err.response?.data?.message || 'Error withdrawing application. Please try again.');
+      
+      // If unauthorized, redirect to login
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => navigate('/login'), 1000);
+      }
     }
   };
 
@@ -89,17 +129,21 @@ const ApplicationDetailPage = () => {
       
       if (!token) {
         setError('You must be logged in to update application status');
+        setTimeout(() => navigate('/login'), 1000);
         return;
       }
+
+      // Ensure token has Bearer prefix
+      const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
 
       const config = {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'Authorization': formattedToken
         }
       };
 
-      // Using relative path instead of hardcoded URL
+      // Update application status
       const response = await axios.put(`http://localhost:5000/api/applications/${id}`, {
         status: newStatus
       }, config);
@@ -109,9 +153,19 @@ const ApplicationDetailPage = () => {
           ...application,
           status: newStatus
         });
+      } else {
+        setError('Failed to update application status. Please try again.');
       }
     } catch (err) {
+      console.error('Error updating application status:', err);
       setError(err.response?.data?.message || 'Error updating application status. Please try again.');
+      
+      // If unauthorized, redirect to login
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => navigate('/login'), 1000);
+      }
     }
   };
 
@@ -129,7 +183,7 @@ const ApplicationDetailPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="spinner">Loading...</div>
+        <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent border-solid rounded-full animate-spin"></div>
       </div>
     );
   }

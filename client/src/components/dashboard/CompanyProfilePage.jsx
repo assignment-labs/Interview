@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import authHelpers from '../../utils/authHelpers';
 
 const CompanyProfilePage = () => {
   const [user, setUser] = useState(null);
@@ -28,28 +29,39 @@ const CompanyProfilePage = () => {
       return;
     }
 
-    const parsedUser = JSON.parse(storedUser);
-    setUser(parsedUser);
-    
-    // If user is not an employer, redirect to appropriate dashboard
-    if (parsedUser.role !== 'employer') {
-      navigate('/dashboard/seeker');
-      return;
-    }
+    try {
+      // Format token and set axios headers
+      const formattedToken = authHelpers.setupAuthToken();
+      if (!formattedToken) {
+        navigate('/login');
+        return;
+      }
 
-    // Fetch company profile data
-    fetchCompanyProfileData(token);
+      // Parse user data
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      
+      // If user is not an employer, redirect to appropriate dashboard
+      if (parsedUser.role !== 'employer') {
+        navigate('/dashboard/seeker');
+        return;
+      }
+
+      // Fetch company profile data
+      fetchCompanyProfileData(formattedToken);
+    } catch (err) {
+      console.error('Error initializing profile page:', err);
+      navigate('/login');
+    }
   }, [navigate]);
 
   const fetchCompanyProfileData = async (token) => {
     setLoading(true);
     try {
-      // Configure axios headers with token
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
+      console.log('Fetching company profile with token:', token);
+      
+      // Get auth config from helper
+      const config = authHelpers.getAuthConfig();
       
       // Fetch employer profile
       const profileResponse = await axios.get('http://localhost:5000/api/users/profile', config);
@@ -74,12 +86,8 @@ const CompanyProfilePage = () => {
       console.error('Error fetching profile data:', err);
       setError('Failed to load profile data. Please try again.');
       
-      // If token is invalid or expired, redirect to login
-      if (err.response?.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
-      }
+      // Use auth helper to handle auth errors
+      authHelpers.handleAuthError(err, navigate);
     } finally {
       setLoading(false);
     }
@@ -88,14 +96,17 @@ const CompanyProfilePage = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-  
     try {
       setLoading(true);
+      setError('');
+      
+      // Setup auth token
+      const formattedToken = authHelpers.setupAuthToken();
+      if (!formattedToken) {
+        setError('Authentication required. Please log in again.');
+        setTimeout(() => navigate('/login'), 1000);
+        return;
+      }
       
       // Create FormData object for file upload
       const formData = new FormData();
@@ -147,10 +158,10 @@ const CompanyProfilePage = () => {
         formData.append('companyLogo', companyLogo);
       }
       
-      // Configure headers - Don't set Content-Type
+      // Configure headers - Don't set Content-Type for multipart/form-data
       const config = {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': formattedToken
         }
       };
       
@@ -169,13 +180,16 @@ const CompanyProfilePage = () => {
       // More detailed error message
       const errorMsg = err.response?.data?.message || err.message || 'Failed to update profile. Please try again.';
       setError(errorMsg);
+      
+      // Handle auth errors
+      authHelpers.handleAuthError(err, navigate);
     } finally {
       setLoading(false);
     }
   };
+
   const handleCompanyLogoChange = (e) => {
     const file = e.target.files[0];
-    console.log("Selected file:", file); // Debug log
     
     if (file) {
       setCompanyLogo(file);
@@ -197,7 +211,7 @@ const CompanyProfilePage = () => {
   if (loading && !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="spinner">Loading...</div>
+        <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent border-solid rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -205,11 +219,11 @@ const CompanyProfilePage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      {/* <header className="bg-white shadow">
+      <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold text-gray-900">Company Profile</h1>
         </div>
-      </header> */}
+      </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">

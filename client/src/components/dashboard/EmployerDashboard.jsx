@@ -26,7 +26,7 @@ const EmployerDashboard = () => {
     // Check if there's a success message in the location state
     if (location.state?.message) {
       setSuccessMessage(location.state.message);
-      // Clear the message from location state after 5 seconds
+      // Clear the message after 5 seconds
       setTimeout(() => {
         setSuccessMessage('');
       }, 5000);
@@ -41,26 +41,45 @@ const EmployerDashboard = () => {
       return;
     }
 
-    const parsedUser = JSON.parse(storedUser);
-    setUser(parsedUser);
-    
-    // If user is not an employer, redirect to appropriate dashboard
-    if (parsedUser.role !== 'employer') {
-      navigate('/dashboard/seeker');
-      return;
+    try {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      
+      // If user is not an employer, redirect to appropriate dashboard
+      if (parsedUser.role !== 'employer') {
+        navigate('/dashboard/seeker');
+        return;
+      }
+      
+      // Ensure token is properly formatted - this is crucial!
+      const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      
+      // Update token in localStorage with proper format
+      localStorage.setItem('token', formattedToken);
+      
+      // Set token for axios default instance
+      axios.defaults.headers.common['Authorization'] = formattedToken;
+      
+      // Fetch employer data
+      fetchEmployerData(formattedToken);
+    } catch (err) {
+      console.error('Error parsing user data:', err);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/login');
     }
-    
-    // Fetch employer data
-    fetchEmployerData(token);
   }, [navigate, location]);
 
   const fetchEmployerData = async (token) => {
     setLoading(true);
     try {
+      console.log('Fetching employer data with token:', token);
+      
       // Configure axios headers with token
       const config = {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': token,
+          'Content-Type': 'application/json'
         }
       };
       
@@ -73,7 +92,7 @@ const EmployerDashboard = () => {
       setPostedJobs(jobsResponse.data.data || []);
       
       // Fetch applications for all posted jobs
-      const jobIds = jobsResponse.data.data.map(job => job._id);
+      const jobIds = jobsResponse.data.data?.map(job => job._id) || [];
       
       // If there are no posted jobs, set applications to empty array
       if (jobIds.length === 0) {
@@ -100,10 +119,11 @@ const EmployerDashboard = () => {
       
     } catch (err) {
       console.error('Error fetching employer data:', err);
-      setError('Failed to load dashboard data. Please try again.');
+      setError('Failed to load dashboard data. Please try again later.');
       
       // If token is invalid or expired, redirect to login
       if (err.response?.status === 401) {
+        console.log('Unauthorized, redirecting to login');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         navigate('/login');
@@ -122,7 +142,7 @@ const EmployerDashboard = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="spinner">Loading...</div>
+        <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent border-solid rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -130,7 +150,7 @@ const EmployerDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      {/* <header className="bg-white shadow">
+      <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">Employer Dashboard</h1>
           <div className="flex items-center">
@@ -151,7 +171,7 @@ const EmployerDashboard = () => {
             </button>
           </div>
         </div>
-      </header> */}
+      </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -266,7 +286,7 @@ const EmployerDashboard = () => {
                       <i className="fas fa-user-check text-purple-600"></i>
                     </div>
                   </div>
-                  <Link to="/company-profile" className="text-sm text-purple-600 mt-4 inline-block">
+                  <Link to="/profile/employer" className="text-sm text-purple-600 mt-4 inline-block">
                     Complete profile →
                   </Link>
                 </div>
@@ -307,7 +327,7 @@ const EmployerDashboard = () => {
               <div className="mt-8">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Link to="/post-job" className="bg-blue-50 hover:bg-blue-100 p-4 rounded-lg flex items-center">
+                  <Link to="/jobs/post" className="bg-blue-50 hover:bg-blue-100 p-4 rounded-lg flex items-center">
                     <div className="bg-blue-100 rounded-full p-3 mr-4">
                       <i className="fas fa-plus text-blue-600"></i>
                     </div>
@@ -316,7 +336,7 @@ const EmployerDashboard = () => {
                       <p className="text-sm text-gray-600">Create a new job listing</p>
                     </div>
                   </Link>
-                  <Link to="/company-profile" className="bg-gray-50 hover:bg-gray-100 p-4 rounded-lg flex items-center text-left w-full">
+                  <Link to="/profile/employer" className="bg-gray-50 hover:bg-gray-100 p-4 rounded-lg flex items-center text-left w-full">
                     <div className="bg-gray-200 rounded-full p-3 mr-4">
                       <i className="fas fa-edit text-gray-600"></i>
                     </div>
@@ -336,7 +356,7 @@ const EmployerDashboard = () => {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-medium text-gray-900">Your Posted Jobs</h3>
                 <Link
-                  to="/post-job"
+                  to="/jobs/post"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                     
@@ -412,7 +432,7 @@ const EmployerDashboard = () => {
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No Jobs Posted Yet</h3>
                   <p className="text-gray-500 mb-6">Start posting jobs to find the perfect candidates for your company.</p>
                   <Link
-                    to="/post-job"
+                    to="/jobs/post"
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                   >
                     <i className="fas fa-plus mr-2"></i> Post Your First Job

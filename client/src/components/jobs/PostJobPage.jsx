@@ -1,7 +1,8 @@
-// src/pages/PostJobPage.jsx
-import React, { useState } from 'react';
+// src/pages/jobs/PostJobPage.jsx
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { checkAuthStatus } from '../../utils/authUtils';
 
 const PostJobPage = () => {
   const navigate = useNavigate();
@@ -25,6 +26,34 @@ const PostJobPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [skillInput, setSkillInput] = useState('');
+
+  // Check if user is authenticated and has employer role
+  useEffect(() => {
+    const verifyAuth = async () => {
+      const { isAuthenticated, user } = await checkAuthStatus();
+      
+      if (!isAuthenticated) {
+        navigate('/login');
+        return;
+      }
+
+      // Verify user role
+      if (user.role !== 'employer') {
+        navigate('/dashboard/seeker');
+        return;
+      }
+      
+      // Pre-fill company name if available
+      if (user.companyName) {
+        setFormData(prev => ({
+          ...prev,
+          company: user.companyName
+        }));
+      }
+    };
+
+    verifyAuth();
+  }, [navigate]);
 
   // Handle input change
   const handleChange = (e) => {
@@ -62,6 +91,14 @@ const PostJobPage = () => {
     }
   };
 
+  // Handle skill input key press (add on Enter)
+  const handleSkillKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addSkill();
+    }
+  };
+
   // Remove a skill
   const removeSkill = (skillToRemove) => {
     setFormData({
@@ -82,26 +119,41 @@ const PostJobPage = () => {
       if (!token) {
         setError('You must be logged in to post a job');
         setLoading(false);
+        navigate('/login');
         return;
       }
 
+      // Ensure token has Bearer prefix
+      const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      
       const config = {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'Authorization': formattedToken
         }
       };
 
+      // Make the API request
+      console.log('Submitting job with token:', formattedToken);
       const response = await axios.post('http://localhost:5000/api/jobs', formData, config);
       
-      setLoading(false);
-      
       if (response.data.success) {
-        navigate('/dashboard/employer');
+        navigate('/dashboard/employer', { 
+          state: { message: 'Job posted successfully!' }
+        });
       }
     } catch (err) {
-      setLoading(false);
+      console.error('Error posting job:', err);
       setError(err.response?.data?.message || 'Error posting job. Please try again.');
+      
+      // If unauthorized, redirect to login
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -251,6 +303,7 @@ const PostJobPage = () => {
                     id="skills"
                     value={skillInput}
                     onChange={handleSkillInputChange}
+                    onKeyPress={handleSkillKeyPress}
                     className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-l-md"
                     placeholder="e.g. JavaScript, React, etc."
                   />
@@ -276,6 +329,11 @@ const PostJobPage = () => {
                     </div>
                   ))}
                 </div>
+                {formData.skills.length === 0 && (
+                  <p className="mt-1 text-xs text-red-500">
+                    At least one skill is required
+                  </p>
+                )}
               </div>
 
               {/* Salary Range */}
@@ -360,7 +418,15 @@ const PostJobPage = () => {
                 disabled={loading || formData.skills.length === 0}
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {loading ? 'Posting...' : 'Post Job'}
+                {loading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Posting...
+                  </span>
+                ) : 'Post Job'}
               </button>
             </div>
           </form>

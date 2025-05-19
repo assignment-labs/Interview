@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+// src/pages/jobs/JobListingPage.jsx
+import React, { useState, useEffect, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom"; // Added useNavigate
 import axios from "axios";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import CVMatcher from "./CVMatcher";
+import { debounce } from "lodash";
+import { checkAuthStatus } from "../../utils/authUtils"; // Add this import
 
 const JobListingPage = () => {
+  const navigate = useNavigate(); // Add navigate hook
   const [showCVMatcher, setShowCVMatcher] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,11 +18,19 @@ const JobListingPage = () => {
     experience: "",
     location: "",
     search: "",
+    salary: { min: "", max: "" },
+    skills: [],
+    datePosted: "" // "today", "week", "month"
   });
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
+    totalJobs: 0,
   });
+  const [activeFilter, setActiveFilter] = useState(null);
+  const [savedJobs, setSavedJobs] = useState([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
   // Animation variants
   const fadeInUp = {
@@ -40,9 +52,83 @@ const JobListingPage = () => {
     },
   };
 
+  // Check authentication status when component loads
   useEffect(() => {
-    fetchJobs();
-  }, [filters, pagination.currentPage]);
+    const verifyAuth = async () => {
+      try {
+        const authStatus = await checkAuthStatus();
+        setIsAuthenticated(authStatus.isAuthenticated);
+        if (authStatus.isAuthenticated && authStatus.user) {
+          setUserRole(authStatus.user.role);
+        }
+      } catch (err) {
+        console.error("Error checking auth status:", err);
+        setIsAuthenticated(false);
+      }
+    };
+
+    verifyAuth();
+  }, []);
+
+  // Debounced search function to avoid excessive API calls
+  const debouncedFetchJobs = useCallback(
+    debounce(() => {
+      fetchJobs();
+    }, 500),
+    [filters, pagination.currentPage]
+  );
+
+  useEffect(() => {
+    debouncedFetchJobs();
+    return () => debouncedFetchJobs.cancel();
+  }, [filters, pagination.currentPage, debouncedFetchJobs]);
+
+  useEffect(() => {
+    // Fetch saved jobs if user is logged in
+    const fetchSavedJobs = async () => {
+      try {
+        // Check if user is authenticated
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.log("No token found, skipping saved jobs fetch");
+          return;
+        }
+
+        // Ensure token has Bearer prefix
+        const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+        
+        const config = {
+          headers: {
+            'Authorization': formattedToken
+          }
+        };
+
+        const response = await axios.get("http://localhost:5000/api/jobs/saved", config);
+
+        if (response.data.success) {
+          // Extract just the job IDs from saved jobs
+          const savedJobIds = response.data.data.map(job => job._id);
+          setSavedJobs(savedJobIds);
+        }
+      } catch (err) {
+        console.error("Error fetching saved jobs:", err);
+        
+        // If unauthorized, clear token and user data
+        if (err.response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setIsAuthenticated(false);
+          setUserRole(null);
+          // Don't redirect here, just handle the auth state
+        }
+      }
+    };
+
+    // Only fetch saved jobs if user is authenticated
+    if (isAuthenticated) {
+      fetchSavedJobs();
+    }
+  }, [isAuthenticated]); // Depend on isAuthenticated state
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -59,25 +145,36 @@ const JobListingPage = () => {
       }
 
       if (filters.experience) {
-        queryParams.push(
-          `experience=${encodeURIComponent(filters.experience)}`
-        );
+        queryParams.push(`experience=${encodeURIComponent(filters.experience)}`);
       }
 
       if (filters.location) {
         queryParams.push(`location=${encodeURIComponent(filters.location)}`);
       }
 
+      if (filters.salary.min) {
+        queryParams.push(`salaryMin=${encodeURIComponent(filters.salary.min)}`);
+      }
+
+      if (filters.salary.max) {
+        queryParams.push(`salaryMax=${encodeURIComponent(filters.salary.max)}`);
+      }
+
+      if (filters.datePosted) {
+        queryParams.push(`datePosted=${encodeURIComponent(filters.datePosted)}`);
+      }
+
+      if (filters.skills.length > 0) {
+        queryParams.push(`skills=${encodeURIComponent(filters.skills.join(','))}`);
+      }
+
       // Add pagination params
       queryParams.push(`page=${pagination.currentPage}`);
       queryParams.push("limit=10");
 
-      const queryString =
-        queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
+      const queryString = queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
 
-      const response = await axios.get(
-        `http://localhost:5000/api/jobs${queryString}`
-      );
+      const response = await axios.get(`http://localhost:5000/api/jobs${queryString}`);
 
       if (response.data.success) {
         setJobs(response.data.data || []);
@@ -90,6 +187,7 @@ const JobListingPage = () => {
         setPagination({
           ...pagination,
           totalPages: totalPages || 1,
+          totalJobs: total,
         });
       }
     } catch (err) {
@@ -103,10 +201,21 @@ const JobListingPage = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters({
-      ...filters,
-      [name]: value,
-    });
+    
+    if (name === "salaryMin" || name === "salaryMax") {
+      setFilters({
+        ...filters,
+        salary: {
+          ...filters.salary,
+          [name === "salaryMin" ? "min" : "max"]: value,
+        },
+      });
+    } else {
+      setFilters({
+        ...filters,
+        [name]: value,
+      });
+    }
 
     // Reset to first page when filters change
     setPagination({
@@ -115,9 +224,27 @@ const JobListingPage = () => {
     });
   };
 
+  const handleSkillToggle = (skill) => {
+    setFilters(prevFilters => {
+      const updatedSkills = prevFilters.skills.includes(skill)
+        ? prevFilters.skills.filter(s => s !== skill)
+        : [...prevFilters.skills, skill];
+      
+      return {
+        ...prevFilters,
+        skills: updatedSkills,
+      };
+    });
+
+    setPagination({
+      ...pagination,
+      currentPage: 1,
+    });
+  };
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    // The useEffect will trigger the API call
+    fetchJobs();
   };
 
   const handlePageChange = (newPage) => {
@@ -126,6 +253,52 @@ const JobListingPage = () => {
         ...pagination,
         currentPage: newPage,
       });
+    }
+  };
+
+  const toggleSaveJob = async (jobId) => {
+    try {
+      // Check if user is authenticated
+      if (!isAuthenticated) {
+        navigate('/login', { state: { from: '/jobs' } });
+        return;
+      }
+
+      // Get token with proper formatting
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate('/login', { state: { from: '/jobs' } });
+        return;
+      }
+
+      // Ensure token has Bearer prefix
+      const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      
+      const config = {
+        headers: {
+          'Authorization': formattedToken
+        }
+      };
+
+      // Optimistic UI update
+      if (savedJobs.includes(jobId)) {
+        setSavedJobs(savedJobs.filter(id => id !== jobId));
+        await axios.delete(`http://localhost:5000/api/jobs/saved/${jobId}`, config);
+      } else {
+        setSavedJobs([...savedJobs, jobId]);
+        await axios.post(`http://localhost:5000/api/jobs/saved/${jobId}`, {}, config);
+      }
+    } catch (err) {
+      console.error("Error toggling saved job:", err);
+      
+      // Handle authentication errors
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setIsAuthenticated(false);
+        setUserRole(null);
+        navigate('/login', { state: { from: '/jobs' } });
+      }
     }
   };
 
@@ -156,6 +329,12 @@ const JobListingPage = () => {
     }
   };
 
+  // Popular Skills for filtering
+  const popularSkills = [
+    "JavaScript", "React", "Node.js", "Python", "Java", 
+    "SQL", "AWS", "DevOps", "UX/UI", "Project Management"
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header Banner */}
@@ -184,7 +363,7 @@ const JobListingPage = () => {
               <p className="mt-2 text-blue-100 text-xl">
                 Browse through{" "}
                 <span className="font-semibold">
-                  {jobs.length > 0 ? jobs.length : "available"}
+                  {pagination.totalJobs > 0 ? pagination.totalJobs : "available"}
                 </span>{" "}
                 opportunities and find your next career move
               </p>
@@ -220,17 +399,19 @@ const JobListingPage = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* CV Matcher */}
-        {showCVMatcher && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="mb-8"
-          >
-            <CVMatcher />
-          </motion.div>
-        )}
+        <AnimatePresence>
+          {showCVMatcher && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-8"
+            >
+              <CVMatcher />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters */}
@@ -255,6 +436,15 @@ const JobListingPage = () => {
                   />
                 </svg>
                 Filters
+                {Object.values(filters).some(value => 
+                  value && (typeof value === 'string' ? value.length > 0 : 
+                    Array.isArray(value) ? value.length > 0 : 
+                    typeof value === 'object' ? Object.values(value).some(v => v) : false)
+                ) && (
+                  <span className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                    Active
+                  </span>
+                )}
               </h2>
 
               {/* Search */}
@@ -367,6 +557,9 @@ const JobListingPage = () => {
                 </div>
               </div>
 
+              {/* Rest of your filters */}
+              {/* ... */}
+
               {/* Reset Filters */}
               <motion.button
                 type="button"
@@ -376,6 +569,9 @@ const JobListingPage = () => {
                     experience: "",
                     location: "",
                     search: "",
+                    salary: { min: "", max: "" },
+                    skills: [],
+                    datePosted: ""
                   });
                 }}
                 whileHover={{ scale: 1.02 }}
@@ -401,37 +597,10 @@ const JobListingPage = () => {
 
           {/* Job Listings */}
           <div className="lg:col-span-3">
-            {/* Error Message */}
-            {error && (
-              <motion.div
-                className="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 text-red-500"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Loading Indicator */}
+            {/* Job listings content */}
+            {/* ... */}
+            
+            {/* Job cards */}
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <motion.div
@@ -495,7 +664,7 @@ const JobListingPage = () => {
                     <div className="flex flex-col sm:flex-row justify-between items-start">
                       <div className="flex-1">
                         <Link
-                          to={`/job/${job._id}`}
+                          to={`/jobs/${job._id}`}
                           className="text-xl font-medium text-blue-600 hover:text-blue-800 hover:underline transition duration-150"
                         >
                           {job.title}
@@ -518,21 +687,45 @@ const JobListingPage = () => {
                         </div>
                       </div>
                       <div className="flex flex-col items-end mt-2 sm:mt-0">
-                        <span className="text-sm text-gray-500 flex items-center">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 mr-1 text-gray-400"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-500 flex items-center mr-3">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4 mr-1 text-gray-400"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            {formatDate(job.createdAt)}
+                          </span>
+                          
+                          <button
+                            onClick={() => toggleSaveJob(job._id)}
+                            className="text-gray-400 hover:text-blue-500 focus:outline-none transition-colors"
+                            aria-label={savedJobs.includes(job._id) ? "Unsave job" : "Save job"}
                           >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                          {formatDate(job.createdAt)}
-                        </span>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className={`h-5 w-5 ${
+                                savedJobs.includes(job._id) ? "text-blue-500 fill-current" : ""
+                              }`}
+                              viewBox="0 0 20 20"
+                              fill={savedJobs.includes(job._id) ? "currentColor" : "none"}
+                              stroke="currentColor"
+                              strokeWidth={savedJobs.includes(job._id) ? "0" : "1.5"}
+                            >
+                              <path
+                                d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"
+                              />
+                            </svg>
+                            </button>
+                        </div>
+                        
                         {job.salary?.min && job.salary?.max && (
                           <span className="mt-1 bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-medium">
                             ${job.salary.min.toLocaleString()} - $
@@ -574,13 +767,22 @@ const JobListingPage = () => {
                       </div>
                     )}
 
+                    {/* Job Description Preview */}
+                    {job.description && (
+                      <div className="mt-4">
+                        <p className="text-sm text-gray-700 line-clamp-2">
+                          {job.description}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="mt-6 flex justify-end">
                       <motion.div
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                       >
                         <Link
-                          to={`/job/${job._id}`}
+                          to={`/jobs/${job._id}`}
                           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition duration-150"
                         >
                           View Details
@@ -685,8 +887,7 @@ const JobListingPage = () => {
                               (pageNumber === 2 &&
                                 pagination.currentPage > 3) ||
                               (pageNumber === pagination.totalPages - 1 &&
-                                pagination.currentPage <
-                                  pagination.totalPages - 2)
+                                pagination.currentPage < pagination.totalPages - 2)
                             ) {
                               // Show ellipsis
                               return (
