@@ -1,24 +1,44 @@
-// src/components/jobs/JobListingPage.jsx
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
-import CVMatcher from './CVMatcher';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import axios from "axios";
+import { motion } from "framer-motion";
+import CVMatcher from "./CVMatcher";
 
 const JobListingPage = () => {
   const [showCVMatcher, setShowCVMatcher] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [filters, setFilters] = useState({
-    jobType: '',
-    experience: '',
-    location: '',
-    search: ''
+    jobType: "",
+    experience: "",
+    location: "",
+    search: "",
   });
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    totalPages: 1
+    totalPages: 1,
   });
+
+  // Animation variants
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5 },
+    },
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
 
   useEffect(() => {
     fetchJobs();
@@ -29,46 +49,53 @@ const JobListingPage = () => {
     try {
       // Build query string from filters
       const queryParams = [];
-      
+
       if (filters.search) {
         queryParams.push(`search=${encodeURIComponent(filters.search)}`);
       }
-      
+
       if (filters.jobType) {
         queryParams.push(`jobType=${encodeURIComponent(filters.jobType)}`);
       }
-      
+
       if (filters.experience) {
-        queryParams.push(`experience=${encodeURIComponent(filters.experience)}`);
+        queryParams.push(
+          `experience=${encodeURIComponent(filters.experience)}`
+        );
       }
-      
+
       if (filters.location) {
         queryParams.push(`location=${encodeURIComponent(filters.location)}`);
       }
-      
+
       // Add pagination params
       queryParams.push(`page=${pagination.currentPage}`);
-      queryParams.push('limit=10');
-      
-      const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-      
-      const response = await axios.get(`http://localhost:5000/api/jobs${queryString}`);
-      
+      queryParams.push("limit=10");
+
+      const queryString =
+        queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
+
+      const response = await axios.get(
+        `http://localhost:5000/api/jobs${queryString}`
+      );
+
       if (response.data.success) {
         setJobs(response.data.data || []);
-        
+
         // Update pagination info
         const total = response.data.pagination?.total || 0;
         const limit = response.data.pagination?.limit || 10;
         const totalPages = Math.ceil(total / limit);
-        
+
         setPagination({
           ...pagination,
-          totalPages: totalPages || 1
+          totalPages: totalPages || 1,
         });
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Error fetching jobs. Please try again.');
+      setError(
+        err.response?.data?.message || "Error fetching jobs. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -78,13 +105,13 @@ const JobListingPage = () => {
     const { name, value } = e.target;
     setFilters({
       ...filters,
-      [name]: value
+      [name]: value,
     });
-    
+
     // Reset to first page when filters change
     setPagination({
       ...pagination,
-      currentPage: 1
+      currentPage: 1,
     });
   };
 
@@ -97,64 +124,139 @@ const JobListingPage = () => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
       setPagination({
         ...pagination,
-        currentPage: newPage
+        currentPage: newPage,
       });
     }
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '';
-    
+    if (!dateString) return "";
+
     const date = new Date(dateString);
     const now = new Date();
-    
+
     // Calculate the difference in days
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) {
-      return 'Today';
+      return "Today";
     } else if (diffDays === 1) {
-      return 'Yesterday';
+      return "Yesterday";
     } else if (diffDays < 7) {
       return `${diffDays} days ago`;
     } else if (diffDays < 30) {
       const weeks = Math.floor(diffDays / 7);
-      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+      return `${weeks} ${weeks === 1 ? "week" : "weeks"} ago`;
     } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
       });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="md:flex md:items-center md:justify-between mb-8">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-bold text-gray-900">Find Jobs</h1>
-            <p className="mt-1 text-gray-500">Browse through available opportunities</p>
-          </div>
-          <div className="mt-4 md:mt-0">
-            <button
-              onClick={() => setShowCVMatcher(!showCVMatcher)}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Banner */}
+      <div className="relative bg-blue-600 text-white">
+        {/* Background Gradient */}
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-800"
+          style={{
+            backgroundSize: "200% 200%",
+            animation: "gradient-animation 15s ease infinite",
+          }}
+        ></div>
+
+        {/* Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="md:flex md:items-center md:justify-between"
+          >
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl md:text-4xl font-bold text-white">
+                Find Your Perfect Job
+              </h1>
+              <p className="mt-2 text-blue-100 text-xl">
+                Browse through{" "}
+                <span className="font-semibold">
+                  {jobs.length > 0 ? jobs.length : "available"}
+                </span>{" "}
+                opportunities and find your next career move
+              </p>
+            </div>
+            <motion.div
+              className="mt-6 md:mt-0"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              {showCVMatcher ? 'Hide CV Matcher' : 'Match Jobs to Your CV'}
-            </button>
-          </div>
+              <button
+                onClick={() => setShowCVMatcher(!showCVMatcher)}
+                className="inline-flex items-center px-5 py-3 border border-transparent rounded-lg shadow-sm text-base font-medium text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                {showCVMatcher ? "Hide CV Matcher" : "Match Jobs to Your CV"}
+              </button>
+            </motion.div>
+          </motion.div>
         </div>
-        
-        {showCVMatcher && <CVMatcher />}
-        
+
+        {/* Wave separator */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1440 80"
+            fill="#f9fafb"
+            preserveAspectRatio="none"
+            className="w-full"
+          >
+            <path d="M0,0L48,5.3C96,11,192,21,288,26.7C384,32,480,32,576,26.7C672,21,768,11,864,16C960,21,1056,43,1152,53.3C1248,64,1344,64,1392,64L1440,64L1440,80L1392,80C1344,80,1248,80,1152,80C1056,80,960,80,864,80C768,80,672,80,576,80C480,80,384,80,288,80C192,80,96,80,48,80L0,80Z"></path>
+          </svg>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* CV Matcher */}
+        {showCVMatcher && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mb-8"
+          >
+            <CVMatcher />
+          </motion.div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters */}
           <div className="lg:col-span-1">
-            <div className="bg-white shadow-md rounded-lg p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Filters</h2>
-              
+            <motion.div
+              className="bg-white shadow-md rounded-lg p-6 sticky top-4"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-2 text-blue-500"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Filters
+              </h2>
+
               {/* Search */}
               <form onSubmit={handleSearchSubmit} className="mb-6">
                 <div className="relative">
@@ -164,17 +266,31 @@ const JobListingPage = () => {
                     value={filters.search}
                     onChange={handleFilterChange}
                     placeholder="Search jobs..."
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md pr-10"
+                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-lg pr-10 py-3"
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <i className="fas fa-search text-gray-400"></i>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-gray-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
                   </div>
                 </div>
               </form>
-              
+
               {/* Job Type Filter */}
-              <div className="mb-4">
-                <label htmlFor="jobType" className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="mb-5">
+                <label
+                  htmlFor="jobType"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Job Type
                 </label>
                 <select
@@ -182,7 +298,7 @@ const JobListingPage = () => {
                   name="jobType"
                   value={filters.jobType}
                   onChange={handleFilterChange}
-                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg"
                 >
                   <option value="">All Types</option>
                   <option value="Full-time">Full-time</option>
@@ -192,10 +308,13 @@ const JobListingPage = () => {
                   <option value="Remote">Remote</option>
                 </select>
               </div>
-              
+
               {/* Experience Filter */}
-              <div className="mb-4">
-                <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="mb-5">
+                <label
+                  htmlFor="experience"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Experience Level
                 </label>
                 <select
@@ -203,7 +322,7 @@ const JobListingPage = () => {
                   name="experience"
                   value={filters.experience}
                   onChange={handleFilterChange}
-                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg"
                 >
                   <option value="">All Levels</option>
                   <option value="Entry-level">Entry-level</option>
@@ -212,117 +331,242 @@ const JobListingPage = () => {
                   <option value="Executive">Executive</option>
                 </select>
               </div>
-              
+
               {/* Location Filter */}
-              <div className="mb-4">
-                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="mb-5">
+                <label
+                  htmlFor="location"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Location
                 </label>
-                <input
-                  type="text"
-                  id="location"
-                  name="location"
-                  value={filters.location}
-                  onChange={handleFilterChange}
-                  placeholder="City, state, or remote"
-                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    value={filters.location}
+                    onChange={handleFilterChange}
+                    placeholder="City, state, or remote"
+                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-lg pl-10 py-2"
+                  />
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-gray-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                </div>
               </div>
-              
+
               {/* Reset Filters */}
-              <button
+              <motion.button
                 type="button"
                 onClick={() => {
                   setFilters({
-                    jobType: '',
-                    experience: '',
-                    location: '',
-                    search: ''
+                    jobType: "",
+                    experience: "",
+                    location: "",
+                    search: "",
                   });
                 }}
-                className="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="mt-4 w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition duration-150"
               >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 mr-2"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                    clipRule="evenodd"
+                  />
+                </svg>
                 Reset Filters
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           </div>
-          
+
           {/* Job Listings */}
           <div className="lg:col-span-3">
             {/* Error Message */}
             {error && (
-              <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4">
+              <motion.div
+                className="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <i className="fas fa-exclamation-circle text-red-500"></i>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-red-500"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
                   </div>
                   <div className="ml-3">
                     <p className="text-sm text-red-700">{error}</p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )}
-            
+
             {/* Loading Indicator */}
             {loading ? (
               <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                <motion.div
+                  animate={{
+                    rotate: 360,
+                    transition: {
+                      duration: 1,
+                      repeat: Infinity,
+                      ease: "linear",
+                    },
+                  }}
+                  className="rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"
+                ></motion.div>
               </div>
             ) : jobs.length === 0 ? (
-              <div className="bg-white shadow-md rounded-lg p-8 text-center">
-                <i className="fas fa-search text-gray-400 text-4xl mb-4"></i>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No jobs found</h3>
-                <p className="text-gray-500">
-                  Try adjusting your search or filter criteria to find more opportunities.
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-white shadow-md rounded-lg p-8 text-center"
+              >
+                <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-8 w-8 text-blue-500"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-medium text-gray-900 mb-2">
+                  No jobs found
+                </h3>
+                <p className="text-gray-500 max-w-md mx-auto">
+                  Try adjusting your search or filter criteria to find more
+                  opportunities.
                 </p>
-              </div>
+              </motion.div>
             ) : (
-              <div className="space-y-6">
-                {jobs.map(job => (
-                  <div key={job._id} className="bg-white shadow-md rounded-lg p-6 transition duration-150 ease-in-out hover:shadow-lg">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <Link to={`/job/${job._id}`} className="text-xl font-medium text-blue-600 hover:text-blue-800">
+              <motion.div
+                className="space-y-6"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
+                {jobs.map((job) => (
+                  <motion.div
+                    key={job._id}
+                    variants={fadeInUp}
+                    className="bg-white shadow-md rounded-lg p-6 transition duration-150 ease-in-out hover:shadow-lg border border-gray-100 hover:border-blue-100"
+                    whileHover={{
+                      y: -5,
+                      boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.1)",
+                    }}
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between items-start">
+                      <div className="flex-1">
+                        <Link
+                          to={`/job/${job._id}`}
+                          className="text-xl font-medium text-blue-600 hover:text-blue-800 hover:underline transition duration-150"
+                        >
                           {job.title}
                         </Link>
                         <p className="text-gray-600 mt-1">{job.company}</p>
                         <div className="flex items-center text-sm text-gray-500 mt-2">
-                          <i className="fas fa-map-marker-alt mr-1"></i>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 mr-1 text-blue-500"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
                           <span>{job.location}</span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-sm text-gray-500">
+                      <div className="flex flex-col items-end mt-2 sm:mt-0">
+                        <span className="text-sm text-gray-500 flex items-center">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 mr-1 text-gray-400"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
                           {formatDate(job.createdAt)}
                         </span>
                         {job.salary?.min && job.salary?.max && (
-                          <span className="mt-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                            ${job.salary.min.toLocaleString()} - ${job.salary.max.toLocaleString()}
+                          <span className="mt-1 bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-medium">
+                            ${job.salary.min.toLocaleString()} - $
+                            {job.salary.max.toLocaleString()}
                           </span>
                         )}
                       </div>
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                      <span className="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-medium">
                         {job.jobType}
                       </span>
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                      <span className="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-medium">
                         {job.experience}
                       </span>
                     </div>
 
                     {job.skills && job.skills.length > 0 && (
                       <div className="mt-4">
-                        <p className="text-sm text-gray-700 mb-2">Required Skills:</p>
+                        <p className="text-sm text-gray-700 mb-2 font-medium">
+                          Required Skills:
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           {job.skills.slice(0, 5).map((skill, index) => (
-                            <span key={index} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
+                            <span
+                              key={index}
+                              className="bg-gray-100 text-gray-800 text-xs px-3 py-1 rounded-full"
+                            >
                               {skill}
                             </span>
                           ))}
                           {job.skills.length > 5 && (
-                            <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
+                            <span className="bg-gray-100 text-gray-800 text-xs px-3 py-1 rounded-full">
                               +{job.skills.length - 5} more
                             </span>
                           )}
@@ -331,38 +575,87 @@ const JobListingPage = () => {
                     )}
 
                     <div className="mt-6 flex justify-end">
-                      <Link
-                        to={`/job/${job._id}`}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                       >
-                        View Details
-                      </Link>
+                        <Link
+                          to={`/job/${job._id}`}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition duration-150"
+                        >
+                          View Details
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 ml-2"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </Link>
+                      </motion.div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
-                
+
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
-                  <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg shadow-md"
+                  >
                     <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm text-gray-700">
-                          Showing page <span className="font-medium">{pagination.currentPage}</span> of{' '}
-                          <span className="font-medium">{pagination.totalPages}</span> pages
+                          Showing page{" "}
+                          <span className="font-medium">
+                            {pagination.currentPage}
+                          </span>{" "}
+                          of{" "}
+                          <span className="font-medium">
+                            {pagination.totalPages}
+                          </span>{" "}
+                          pages
                         </p>
                       </div>
                       <div>
-                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                          <button
-                            onClick={() => handlePageChange(pagination.currentPage - 1)}
+                        <nav
+                          className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                          aria-label="Pagination"
+                        >
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() =>
+                              handlePageChange(pagination.currentPage - 1)
+                            }
                             disabled={pagination.currentPage === 1}
                             className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${
-                              pagination.currentPage === 1 ? 'cursor-not-allowed opacity-50' : ''
+                              pagination.currentPage === 1
+                                ? "cursor-not-allowed opacity-50"
+                                : ""
                             }`}
                           >
-                            <i className="fas fa-chevron-left"></i>
-                          </button>
-                          
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </motion.button>
+
                           {/* Show page numbers */}
                           {[...Array(pagination.totalPages)].map((_, i) => {
                             const pageNumber = i + 1;
@@ -370,24 +663,30 @@ const JobListingPage = () => {
                             if (
                               pageNumber === 1 ||
                               pageNumber === pagination.totalPages ||
-                              (pageNumber >= pagination.currentPage - 1 && pageNumber <= pagination.currentPage + 1)
+                              (pageNumber >= pagination.currentPage - 1 &&
+                                pageNumber <= pagination.currentPage + 1)
                             ) {
                               return (
-                                <button
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
                                   key={pageNumber}
                                   onClick={() => handlePageChange(pageNumber)}
                                   className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
                                     pageNumber === pagination.currentPage
-                                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                      : 'text-gray-500 hover:bg-gray-50'
+                                      ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                                      : "text-gray-500 hover:bg-gray-50"
                                   }`}
                                 >
                                   {pageNumber}
-                                </button>
+                                </motion.button>
                               );
                             } else if (
-                              (pageNumber === 2 && pagination.currentPage > 3) ||
-                              (pageNumber === pagination.totalPages - 1 && pagination.currentPage < pagination.totalPages - 2)
+                              (pageNumber === 2 &&
+                                pagination.currentPage > 3) ||
+                              (pageNumber === pagination.totalPages - 1 &&
+                                pagination.currentPage <
+                                  pagination.totalPages - 2)
                             ) {
                               // Show ellipsis
                               return (
@@ -401,26 +700,105 @@ const JobListingPage = () => {
                             }
                             return null;
                           })}
-                          
-                          <button
-                            onClick={() => handlePageChange(pagination.currentPage + 1)}
-                            disabled={pagination.currentPage === pagination.totalPages}
+
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() =>
+                              handlePageChange(pagination.currentPage + 1)
+                            }
+                            disabled={
+                              pagination.currentPage === pagination.totalPages
+                            }
                             className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${
-                              pagination.currentPage === pagination.totalPages ? 'cursor-not-allowed opacity-50' : ''
+                              pagination.currentPage === pagination.totalPages
+                                ? "cursor-not-allowed opacity-50"
+                                : ""
                             }`}
                           >
-                            <i className="fas fa-chevron-right"></i>
-                          </button>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </motion.button>
                         </nav>
                       </div>
                     </div>
-                  </div>
+
+                    {/* Mobile pagination */}
+                    <div className="flex items-center justify-between sm:hidden">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() =>
+                          handlePageChange(pagination.currentPage - 1)
+                        }
+                        disabled={pagination.currentPage === 1}
+                        className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 ${
+                          pagination.currentPage === 1
+                            ? "cursor-not-allowed opacity-50"
+                            : ""
+                        }`}
+                      >
+                        Previous
+                      </motion.button>
+                      <div className="text-sm text-gray-700">
+                        <span className="font-medium">
+                          {pagination.currentPage}
+                        </span>{" "}
+                        /{" "}
+                        <span className="font-medium">
+                          {pagination.totalPages}
+                        </span>
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() =>
+                          handlePageChange(pagination.currentPage + 1)
+                        }
+                        disabled={
+                          pagination.currentPage === pagination.totalPages
+                        }
+                        className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 ${
+                          pagination.currentPage === pagination.totalPages
+                            ? "cursor-not-allowed opacity-50"
+                            : ""
+                        }`}
+                      >
+                        Next
+                      </motion.button>
+                    </div>
+                  </motion.div>
                 )}
-              </div>
+              </motion.div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Add CSS Animation Keyframes */}
+      <style jsx>{`
+        @keyframes gradient-animation {
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+      `}</style>
     </div>
   );
 };
