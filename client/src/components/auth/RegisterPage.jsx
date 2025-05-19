@@ -111,7 +111,7 @@ const RegisterPage = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Link to="/" className="flex justify-center items-center">
           <i className="fas fa-briefcase text-blue-600 text-3xl mr-2"></i>
-          <span className="font-bold text-2xl text-blue-600">AI Interview Mocker & Job Portal</span>
+          <span className="font-bold text-2xl text-blue-600">AslanAI</span>
         </Link>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           {userType ? `Register as ${userType === 'employer' ? 'Employer' : 'Job Seeker'}` : 'Create your account'}

@@ -43,10 +43,39 @@ const Navbar = () => {
 
   // Change title based on route
   const getNavbarTitle = () => {
-    if (location.pathname === "/interviews") {
+    const path = location.pathname;
+    
+    // Display "AI InterviewMocker & JobPortal" for root and about pages
+    if (path === "/" || path === "/about") {
+      return "AslanAI";
+    }
+    
+    // Display "AI InterviewMocker" for interviews page and its children
+    if (path === "/interviews" || path.startsWith("/interviews/")) {
       return "AI InterviewMocker";
     }
+    
+    // Display "JobPortal" for jobs and companies pages and their children
+    if (path === "/jobs" || path.startsWith("/jobs/") || 
+        path === "/companies" || path.startsWith("/companies/")) {
+      return "JobPortal";
+    }
+    
+    // Default title for other pages
     return "JobPortal";
+  };
+  
+  // Get appropriate color for current route
+  const getTitleColor = () => {
+    const path = location.pathname;
+    
+    // Use purple color for Interview Mocker pages
+    if (path === "/" || path === "/about" || path === "/interviews" || path.startsWith("/interviews/")) {
+      return "#300049"; 
+    }
+    
+    // Use blue for JobPortal pages
+    return "rgb(37, 99, 235)"; // Default blue color (blue-600)
   };
 
   const handleLogout = () => {
@@ -56,18 +85,27 @@ const Navbar = () => {
 
   // Determine active link
   const isActive = (path) => {
-    return location.pathname === path
-      ? "border-blue-500 text-blue-600"
-      : "border-transparent text-gray-500 hover:border-blue-300 hover:text-blue-700";
+    const currentPath = location.pathname;
+    const isInterviewSection = currentPath === "/interviews" || currentPath.startsWith("/interviews/");
+    
+    if (currentPath === path) {
+      // If we're in the interviews section, use the purple color
+      if (path === "/interviews" || (isInterviewSection && path === "/interviews")) {
+        return "border-[#300049] text-[#300049]";
+      }
+      return "border-blue-500 text-blue-600";
+    }
+    
+    return "border-transparent text-gray-500 hover:border-blue-300 hover:text-blue-700";
   };
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex justify-between h-20">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link to="/" className="text-blue-600 font-bold text-xl flex items-center space-x-2">
+              <Link to="/" className="font-bold text-xl flex items-center space-x-2" style={{color: getTitleColor()}}>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
@@ -283,7 +321,7 @@ const Navbar = () => {
             : "max-h-0 opacity-0 overflow-hidden transition-all duration-300 ease-in-out"
         } sm:hidden`}
       >
-        <div className="px-2 pt-2 pb-3 space-y-1 bg-gray-50">
+                    <div className="px-2 pt-2 pb-3 space-y-1 bg-gray-50">
           <Link
             to="/jobs"
             className={`${
@@ -308,7 +346,7 @@ const Navbar = () => {
             to="/interviews"
             className={`${
               location.pathname === "/interviews"
-                ? "bg-blue-50 border-blue-500 text-blue-700"
+                ? "bg-[#300049]/10 border-[#300049] text-[#300049]"
                 : "border-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-800"
             } block pl-3 pr-4 py-2 border-l-4 text-base font-medium rounded-r-md transition duration-150 ease-in-out`}
           >
@@ -318,7 +356,7 @@ const Navbar = () => {
             to="/about"
             className={`${
               location.pathname === "/about"
-                ? "bg-blue-50 border-blue-500 text-blue-700"
+                ? "bg-gray-100 border-gray-500 text-gray-800"
                 : "border-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-800"
             } block pl-3 pr-4 py-2 border-l-4 text-base font-medium rounded-r-md transition duration-150 ease-in-out`}
           >

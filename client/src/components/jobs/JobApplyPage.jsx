@@ -179,7 +179,7 @@ const JobApplyPage = () => {
                       required
                       value={formData.coverLetter}
                       onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm px-1 border-gray-300 rounded-md"
                       placeholder="Introduce yourself and explain why you're a good fit for this position..."
                     />
                   </div>
@@ -190,7 +190,7 @@ const JobApplyPage = () => {
 
                 <div>
                   <label htmlFor="resume" className="block text-sm font-medium text-gray-700">
-                    Resume (Optional)
+                    Resume
                   </label>
                   <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                     <div className="space-y-1 text-center">

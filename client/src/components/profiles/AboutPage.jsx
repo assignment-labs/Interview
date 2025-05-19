@@ -146,7 +146,7 @@ const AboutPage = () => {
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
               As a student completing my final year project, I witnessed firsthand how many of my fellow graduates struggled 
               to find jobs and navigate the intimidating world of professional interviews. This inspired me to create 
-              AiInterviewMocker & JobPortal – a platform that not only connects talented individuals with employment 
+              AslanAI – a platform that not only connects talented individuals with employment 
               opportunities but also helps them prepare for real-world interviews.
             </p>
             <p className="text-lg text-gray-600 leading-relaxed">
