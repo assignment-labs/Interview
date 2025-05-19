@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -36,14 +36,72 @@ const experienceLevels = [
   { value: 'Senior (6+ years)', label: 'Senior (6+ years)' }
 ];
 
-const techStacks = [
-  'JavaScript', 'Python', 'Java', 'C#', 'Ruby', 'PHP',
-  'React', 'Angular', 'Vue', 'Node.js', 'Django', 'Flask',
-  'Spring Boot', 'ASP.NET', 'Ruby on Rails', 'Laravel',
-  'AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes',
-  'SQL', 'MongoDB', 'PostgreSQL', 'Redis', 'GraphQL',
-  'Machine Learning', 'Data Science', 'TypeScript'
-];
+// Define role-specific tech stacks
+const techStacksByRole = {
+  'Frontend Developer': [
+    'JavaScript', 'TypeScript', 'React', 'Angular', 'Vue', 
+    'HTML/CSS', 'SASS/SCSS', 'Tailwind CSS', 'Bootstrap',
+    'Redux', 'GraphQL', 'Webpack', 'Vite', 'Next.js', 'Gatsby',
+    'Jest', 'React Testing Library', 'Cypress'
+  ],
+  'Backend Developer': [
+    'JavaScript', 'TypeScript', 'Python', 'Java', 'C#', 'Go', 'Ruby', 'PHP',
+    'Node.js', 'Express', 'Django', 'Flask', 'Spring Boot', 'ASP.NET', 
+    'Ruby on Rails', 'Laravel', 'FastAPI',
+    'SQL', 'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'GraphQL',
+    'Docker', 'Kubernetes', 'AWS', 'Azure', 'Google Cloud'
+  ],
+  'Full Stack Developer': [
+    'JavaScript', 'TypeScript', 'Python', 'Java', 'C#', 'Ruby', 'PHP',
+    'React', 'Angular', 'Vue', 'Node.js', 'Express', 'Django', 'Flask',
+    'Spring Boot', 'ASP.NET', 'Ruby on Rails', 'Laravel',
+    'HTML/CSS', 'SASS/SCSS', 'Tailwind CSS', 'Bootstrap',
+    'SQL', 'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'GraphQL',
+    'Docker', 'AWS', 'Azure', 'Google Cloud'
+  ],
+  'DevOps Engineer': [
+    'Linux', 'Shell Scripting', 'Python', 'Go',
+    'Docker', 'Kubernetes', 'Terraform', 'Ansible', 'Chef', 'Puppet',
+    'Jenkins', 'GitHub Actions', 'CircleCI', 'Travis CI',
+    'AWS', 'Azure', 'Google Cloud', 'Prometheus', 'Grafana', 'ELK Stack'
+  ],
+  'Data Scientist': [
+    'Python', 'R', 'SQL', 'Julia',
+    'Pandas', 'NumPy', 'SciPy', 'Scikit-learn', 'TensorFlow', 'PyTorch',
+    'Keras', 'NLTK', 'spaCy', 'Matplotlib', 'Seaborn', 'Tableau',
+    'Machine Learning', 'Deep Learning', 'NLP', 'Computer Vision',
+    'Statistics', 'Big Data', 'Hadoop', 'Spark'
+  ],
+  'UI/UX Designer': [
+    'Figma', 'Sketch', 'Adobe XD', 'InVision', 'Zeplin',
+    'Photoshop', 'Illustrator', 'Prototyping', 'Wireframing',
+    'User Research', 'Accessibility', 'Design Systems', 'CSS'
+  ],
+  'Product Manager': [
+    'Agile', 'Scrum', 'Kanban', 'JIRA', 'Confluence',
+    'Product Roadmapping', 'User Stories', 'A/B Testing',
+    'Analytics', 'Market Research', 'Competitive Analysis',
+    'User Research', 'Wireframing', 'Figma', 'SQL'
+  ],
+  'QA Engineer': [
+    'Manual Testing', 'Automated Testing', 'Test Planning',
+    'Selenium', 'Cypress', 'TestNG', 'JUnit', 'Jest', 'Mocha',
+    'Postman', 'REST API Testing', 'Performance Testing',
+    'JMeter', 'Gatling', 'JIRA', 'TestRail', 'BDD', 'Cucumber'
+  ],
+  'Mobile Developer': [
+    'Swift', 'Objective-C', 'Kotlin', 'Java', 'Dart', 'JavaScript',
+    'iOS', 'Android', 'React Native', 'Flutter', 'Ionic',
+    'Firebase', 'SQLite', 'Realm', 'Push Notifications',
+    'App Store Submission', 'Play Store Submission'
+  ],
+  'Software Engineer': [
+    'JavaScript', 'TypeScript', 'Python', 'Java', 'C#', 'C++', 'Go', 'Ruby',
+    'React', 'Angular', 'Vue', 'Node.js', 'Django', 'Spring Boot', 'ASP.NET',
+    'SQL', 'MongoDB', 'PostgreSQL', 'Docker', 'Kubernetes',
+    'AWS', 'Azure', 'Google Cloud', 'Git', 'CI/CD'
+  ]
+};
 
 const difficultyLevels = [
   {
@@ -75,8 +133,15 @@ const InterviewCreate = ({ isDark = false }) => {
     difficulty: 'medium'
   });
 
+  // Get available tech stacks based on the selected role
+  const availableTechStacks = useMemo(() => {
+    if (!formData.role) return [];
+    return techStacksByRole[formData.role] || [];
+  }, [formData.role]);
+
   const handleRoleSelect = (role) => {
-    setFormData(prev => ({ ...prev, role }));
+    // Reset tech stack when changing roles
+    setFormData(prev => ({ ...prev, role, techStack: [] }));
     setStep(2);
   };
 
@@ -334,10 +399,10 @@ const InterviewCreate = ({ isDark = false }) => {
                   <span className="text-sm font-normal ml-2 opacity-70">(Optional)</span>
                 </h2>
                 <p className={`mb-6 text-base ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Select up to 5 technologies you want to focus on in this interview
+                  Select up to 5 technologies relevant to {formData.role}
                 </p>
                 <div className="flex flex-wrap gap-3">
-                  {techStacks.map((tech) => (
+                  {availableTechStacks.map((tech) => (
                     <motion.button
                       key={tech}
                       whileHover={{ scale: 1.05, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}

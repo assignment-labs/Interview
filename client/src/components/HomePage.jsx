@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Brain, Target, Award } from "lucide-react";
 
 const HomePage = () => {
-  // State for scroll position to trigger animations
+  
   const [scrollY, setScrollY] = useState(0);
 
   // Handle scroll events
@@ -128,7 +128,7 @@ const HomePage = () => {
                 whileTap={{ scale: 0.98 }}
               >
                 <Link
-                  to="/interview-practice"
+                  to="/interviews"
                   className="block bg-blue-800 text-white hover:bg-blue-900 transition font-medium py-3 px-8 rounded-lg shadow-md"
                 >
                   Practice Interviews

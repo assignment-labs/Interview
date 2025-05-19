@@ -57,77 +57,93 @@ const InterviewSession = ({ isDark = false }) => {
   }, [shouldRedirect, redirectPath, navigate]);
 
   // Webcam functions
-const startWebcam = async () => {
-  console.log("Starting webcam...");
-  setIsRequestingWebcam(true);
-  setWebcamPermission("requesting");
+  const startWebcam = async () => {
+    console.log("Starting webcam...");
+    setIsRequestingWebcam(true);
+    setWebcamPermission("requesting");
 
-  try {
-    // Use more basic constraints first
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true, // Simplified constraint
-      audio: false,
-    });
+    try {
+      // Use more basic constraints first
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true, // Simplified constraint
+        audio: false,
+      });
 
-    console.log("Webcam stream obtained");
-    
-    // Store the stream for later cleanup
-    streamRef.current = stream;
+      console.log("Webcam stream obtained");
 
-    // Connect the stream to the video element
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      console.log("Connected stream to video element");
-    } else {
-      console.warn("Video ref is null, cannot connect stream");
-    }
+      // Store the stream for later cleanup
+      streamRef.current = stream;
 
-    setWebcamActive(true);
-    setWebcamPermission("granted");
-    console.log("Webcam started successfully");
-  } catch (error) {
-    console.error("Error accessing webcam:", error);
-
-    if (error.name === "NotAllowedError") {
-      setWebcamPermission("denied");
-      console.log("Camera permission denied");
-      
-      // Check if this might be due to a persisted permission denial
-      if (navigator.permissions && navigator.permissions.query) {
-        try {
-          const status = await navigator.permissions.query({ name: 'camera' });
-          console.log("Camera permission status:", status.state);
-          
-          if (status.state === 'denied') {
-            alert("Your browser has persistently denied camera access. Please check your browser settings and make sure camera permissions are enabled for this site.");
-          } else {
-            alert("Camera access was denied. Please enable camera permissions when prompted.");
-          }
-        } catch (permError) {
-          console.error("Error checking permission status:", permError);
-          alert("Camera access was denied. Please enable camera permissions in your browser settings.");
-        }
+      // Connect the stream to the video element
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        console.log("Connected stream to video element");
       } else {
-        alert("Camera access was denied. Please enable camera permissions in your browser settings.");
+        console.warn("Video ref is null, cannot connect stream");
       }
-    } else if (error.name === "NotFoundError") {
-      setWebcamPermission("unavailable");
-      console.log("No camera found");
-      alert("No camera was found. Please connect a camera and try again.");
-    } else if (error.name === "NotReadableError" || error.name === "AbortError") {
-      setWebcamPermission("inuse");
-      console.log("Camera in use or hardware error:", error.name);
-      alert("Your camera may be in use by another application. Please close other applications that might be using your camera and try again.");
-    } else {
-      setWebcamPermission("error");
-      console.log("Generic camera error:", error.message);
-      alert(`Could not access camera (${error.name}). Please check your device settings.`);
-    }
-  } finally {
-    setIsRequestingWebcam(false);
-  }
-};
 
+      setWebcamActive(true);
+      setWebcamPermission("granted");
+      console.log("Webcam started successfully");
+    } catch (error) {
+      console.error("Error accessing webcam:", error);
+
+      if (error.name === "NotAllowedError") {
+        setWebcamPermission("denied");
+        console.log("Camera permission denied");
+
+        // Check if this might be due to a persisted permission denial
+        if (navigator.permissions && navigator.permissions.query) {
+          try {
+            const status = await navigator.permissions.query({
+              name: "camera",
+            });
+            console.log("Camera permission status:", status.state);
+
+            if (status.state === "denied") {
+              alert(
+                "Your browser has persistently denied camera access. Please check your browser settings and make sure camera permissions are enabled for this site."
+              );
+            } else {
+              alert(
+                "Camera access was denied. Please enable camera permissions when prompted."
+              );
+            }
+          } catch (permError) {
+            console.error("Error checking permission status:", permError);
+            alert(
+              "Camera access was denied. Please enable camera permissions in your browser settings."
+            );
+          }
+        } else {
+          alert(
+            "Camera access was denied. Please enable camera permissions in your browser settings."
+          );
+        }
+      } else if (error.name === "NotFoundError") {
+        setWebcamPermission("unavailable");
+        console.log("No camera found");
+        alert("No camera was found. Please connect a camera and try again.");
+      } else if (
+        error.name === "NotReadableError" ||
+        error.name === "AbortError"
+      ) {
+        setWebcamPermission("inuse");
+        console.log("Camera in use or hardware error:", error.name);
+        alert(
+          "Your camera may be in use by another application. Please close other applications that might be using your camera and try again."
+        );
+      } else {
+        setWebcamPermission("error");
+        console.log("Generic camera error:", error.message);
+        alert(
+          `Could not access camera (${error.name}). Please check your device settings.`
+        );
+      }
+    } finally {
+      setIsRequestingWebcam(false);
+    }
+  };
 
   const stopWebcam = () => {
     if (streamRef.current) {
@@ -932,327 +948,257 @@ const startWebcam = async () => {
       <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
         {/* Chat/Interview Panel - Takes 2/3 on desktop */}
         <div className="md:col-span-2 flex flex-col">
-  <motion.div
-    className={`flex-grow p-4 md:p-6 rounded-lg shadow-lg mb-4 overflow-hidden flex flex-col ${
-      isDark ? "bg-gray-800" : "bg-white"
-    }`}
-    style={{ minHeight: "400px", maxHeight: "calc(100vh - 230px)" }}
-  >
-    {/* Split into two sections: webcam and chat content */}
-    <div className="flex flex-col h-full">
-      {/* Webcam Video Display - Fixed height with proper container */}
-      <div 
-        className="mb-4 w-full flex-shrink-0"
-        style={{ height: webcamActive ? "180px" : "80px" }}
-      >
-        {webcamActive ? (
-          <div
-            className={`relative rounded-lg overflow-hidden h-full ${
-              isDark ? "bg-gray-900" : "bg-gray-200"
+          <motion.div
+            className={`flex-grow p-4 md:p-6 rounded-lg shadow-lg mb-4 overflow-hidden flex flex-col ${
+              isDark ? "bg-gray-800" : "bg-white"
             }`}
+            style={{ minHeight: "500px", maxHeight: "calc(100vh - 230px)" }}
           >
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full rounded-lg"
-              style={{ objectFit: "contain" }}
-            />
-            <div className="absolute bottom-2 right-2 flex space-x-2">
-              <button
-                onClick={toggleWebcam}
-                className={`p-2 rounded-full bg-gray-800 bg-opacity-70 text-white`}
-                title="Toggle camera"
-              >
-                <CameraOff className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div
-            className={`rounded-lg flex items-center justify-center h-full ${
-              isDark ? "bg-gray-900" : "bg-gray-200"
-            }`}
-          >
-            {isRequestingWebcam ? (
-              <div className="flex items-center text-sm">
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Requesting camera access...
-              </div>
-            ) : webcamPermission === "denied" ? (
-              <div className="flex flex-col items-center text-sm p-2">
-                <p className="mb-2">Camera access was denied.</p>
-                <button
-                  onClick={startWebcam}
-                  className={`flex items-center px-3 py-1 rounded-md ${
-                    isDark
-                      ? "bg-blue-600 hover:bg-blue-700 text-white"
-                      : "bg-blue-600 hover:bg-blue-700 text-white"
-                  }`}
-                >
-                  <Camera className="w-3 h-3 mr-1" />
-                  Try again
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={startWebcam}
-                className={`flex items-center px-4 py-2 rounded-md ${
-                  isDark
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "bg-blue-600 hover:bg-blue-700 text-white"
-                }`}
-              >
-                <Camera className="w-4 h-4 mr-2" />
-                {webcamPermission === "unavailable"
-                  ? "No camera detected"
-                  : "Enable camera"}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+            {/* Split into two sections: webcam and chat content */}
+            <div className="flex flex-col h-full">
+              
 
-      {/* Chat history container - With proper flex behavior */}
-      <div 
-        className="flex-grow overflow-y-auto mb-4"
-        ref={chatContainerRef}
-        style={{ 
-          height: "100%",
-          maxHeight: webcamActive ? "calc(100vh - 530px)" : "calc(100vh - 430px)" 
-        }}
-      >
-        <AnimatePresence>
-          {chatHistory.map((message, index) => (
-            <motion.div
-              key={`message-${index}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`mb-4 flex ${
-                message.type === "interviewer"
-                  ? "justify-start"
-                  : "justify-end"
-              }`}
-            >
-              {/* Message display code remains the same */}
+              {/* Chat history container - With proper flex behavior */}
               <div
-                className={`flex ${
-                  message.type === "user"
-                    ? "flex-row-reverse"
-                    : "flex-row"
-                } items-start max-w-[80%]`}
+                className="flex-grow overflow-y-auto mb-4"
+                ref={chatContainerRef}
+                style={{
+                  height: "100%",
+                  maxHeight: webcamActive
+                    ? "calc(100vh - 530px)"
+                    : "calc(100vh - 430px)",
+                }}
               >
-                {message.type === "interviewer" && (
-                  <div className="mr-3 flex-shrink-0">
-                    {renderAIAvatar()}
-                  </div>
-                )}
+                <AnimatePresence>
+                  {chatHistory.map((message, index) => (
+                    <motion.div
+                      key={`message-${index}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`mb-4 flex ${
+                        message.type === "interviewer"
+                          ? "justify-start"
+                          : "justify-end"
+                      }`}
+                    >
+                      {/* Message display code remains the same */}
+                      <div
+                        className={`flex ${
+                          message.type === "user"
+                            ? "flex-row-reverse"
+                            : "flex-row"
+                        } items-start max-w-[80%]`}
+                      >
+                        {message.type === "interviewer" && (
+                          <div className="mr-3 flex-shrink-0">
+                            {renderAIAvatar()}
+                          </div>
+                        )}
 
+                        <div
+                          className={`p-3 rounded-lg ${
+                            message.type === "interviewer"
+                              ? isDark
+                                ? message.isTransition || message.isCompletion
+                                  ? "bg-gray-700 text-gray-300"
+                                  : "bg-blue-600 text-white"
+                                : message.isTransition || message.isCompletion
+                                ? "bg-gray-100 text-gray-700"
+                                : "bg-blue-500 text-white"
+                              : isDark
+                              ? "bg-gray-700 text-white"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {message.type === "interviewer" &&
+                            message.questionType &&
+                            !message.isTransition &&
+                            !message.isCompletion && (
+                              <div
+                                className={`text-xs font-medium mb-1 ${
+                                  isDark ? "text-blue-200" : "text-blue-100"
+                                }`}
+                              >
+                                {message.questionType.toUpperCase()}
+                              </div>
+                            )}
+                          <div className="text-sm md:text-base">
+                            {message.text}
+                          </div>
+                        </div>
+
+                        {message.type === "user" && (
+                          <div className="ml-3 flex-shrink-0">
+                            <div
+                              className={`w-10 h-10 rounded-full flex items-center justify-center bg-gray-500`}
+                            >
+                              <User className="w-5 h-5 text-white" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+
+                  {/* Typing indicator */}
+                  {showTypingIndicator && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-4 flex justify-start"
+                    >
+                      <div className="flex flex-row items-start max-w-[80%]">
+                        <div className="mr-3 flex-shrink-0">
+                          {renderAIAvatar()}
+                        </div>
+                        <div
+                          className={`p-4 rounded-lg ${
+                            isDark ? "bg-gray-700" : "bg-gray-100"
+                          }`}
+                        >
+                          <div className="flex space-x-1">
+                            <div
+                              className={`w-2 h-2 rounded-full animate-bounce ${
+                                isDark ? "bg-gray-400" : "bg-gray-500"
+                              }`}
+                              style={{ animationDelay: "0ms" }}
+                            ></div>
+                            <div
+                              className={`w-2 h-2 rounded-full animate-bounce ${
+                                isDark ? "bg-gray-400" : "bg-gray-500"
+                              }`}
+                              style={{ animationDelay: "200ms" }}
+                            ></div>
+                            <div
+                              className={`w-2 h-2 rounded-full animate-bounce ${
+                                isDark ? "bg-gray-400" : "bg-gray-500"
+                              }`}
+                              style={{ animationDelay: "400ms" }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Input area - Now properly positioned with flex-shrink-0 */}
+              <div className="flex-shrink-0 w-full">
                 <div
                   className={`p-3 rounded-lg ${
-                    message.type === "interviewer"
-                      ? isDark
-                        ? message.isTransition || message.isCompletion
-                          ? "bg-gray-700 text-gray-300"
-                          : "bg-blue-600 text-white"
-                        : message.isTransition || message.isCompletion
-                        ? "bg-gray-100 text-gray-700"
-                        : "bg-blue-500 text-white"
-                      : isDark
-                      ? "bg-gray-700 text-white"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
+                    isDark ? "bg-gray-700" : "bg-gray-100"
+                  } flex items-center justify-between`}
                 >
-                  {message.type === "interviewer" &&
-                    message.questionType &&
-                    !message.isTransition &&
-                    !message.isCompletion && (
-                      <div
-                        className={`text-xs font-medium mb-1 ${
-                          isDark ? "text-blue-200" : "text-blue-100"
+                  <div className="flex-grow">
+                    {isRecording ? (
+                      <textarea
+                        value={transcript}
+                        onChange={(e) =>
+                          handleAnswerChange(currentQ?.id, e.target.value)
+                        }
+                        className={`w-full p-2 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          isDark
+                            ? "bg-gray-800 text-white"
+                            : "bg-white text-gray-800"
+                        }`}
+                        rows="2"
+                        placeholder="Your answer will appear here as you speak..."
+                      />
+                    ) : (
+                      <p
+                        className={`text-sm ${
+                          transcript ? "" : "italic text-gray-500"
                         }`}
                       >
-                        {message.questionType.toUpperCase()}
-                      </div>
+                        {transcript ||
+                          "Press the microphone button to start answering"}
+                      </p>
                     )}
-                  <div className="text-sm md:text-base">
-                    {message.text}
                   </div>
+                  <button
+                    onClick={isRecording ? stopRecording : startRecording}
+                    className={`ml-2 p-3 rounded-full ${
+                      isRecording
+                        ? "bg-red-600 hover:bg-red-700 text-white"
+                        : isDark
+                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                    }`}
+                  >
+                    {isRecording ? (
+                      <MicOff className="w-5 h-5" />
+                    ) : (
+                      <Mic className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
 
-                {message.type === "user" && (
-                  <div className="ml-3 flex-shrink-0">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center bg-gray-500`}
-                    >
-                      <User className="w-5 h-5 text-white" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          ))}
-
-          {/* Typing indicator */}
-          {showTypingIndicator && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-4 flex justify-start"
-            >
-              <div className="flex flex-row items-start max-w-[80%]">
-                <div className="mr-3 flex-shrink-0">
-                  {renderAIAvatar()}
-                </div>
+                {/* Navigation controls - Now properly attached to the input area */}
                 <div
-                  className={`p-4 rounded-lg ${
-                    isDark ? "bg-gray-700" : "bg-gray-100"
+                  className={`mt-4 p-4 rounded-lg shadow-lg ${
+                    isDark ? "bg-gray-800" : "bg-white"
                   }`}
                 >
-                  <div className="flex space-x-1">
-                    <div
-                      className={`w-2 h-2 rounded-full animate-bounce ${
-                        isDark ? "bg-gray-400" : "bg-gray-500"
+                  <div className="flex justify-between">
+                    <button
+                      onClick={goToPreviousQuestion}
+                      disabled={currentQuestion === 0}
+                      className={`py-2 px-4 rounded-lg flex items-center ${
+                        currentQuestion === 0
+                          ? isDark
+                            ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          : isDark
+                          ? "bg-gray-700 hover:bg-gray-600 text-white"
+                          : "bg-gray-200 hover:bg-gray-300 text-gray-800"
                       }`}
-                      style={{ animationDelay: "0ms" }}
-                    ></div>
-                    <div
-                      className={`w-2 h-2 rounded-full animate-bounce ${
-                        isDark ? "bg-gray-400" : "bg-gray-500"
-                      }`}
-                      style={{ animationDelay: "200ms" }}
-                    ></div>
-                    <div
-                      className={`w-2 h-2 rounded-full animate-bounce ${
-                        isDark ? "bg-gray-400" : "bg-gray-500"
-                      }`}
-                      style={{ animationDelay: "400ms" }}
-                    ></div>
+                    >
+                      <ChevronLeft className="w-5 h-5 mr-1" />
+                      Previous
+                    </button>
+
+                    {isLastQuestion ? (
+                      <button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className={`py-2 px-6 rounded-lg ${
+                          isSubmitting
+                            ? "bg-green-500 text-white cursor-wait"
+                            : "bg-green-600 hover:bg-green-700 text-white"
+                        } font-medium`}
+                      >
+                        {isSubmitting ? (
+                          <div className="flex items-center">
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            Finishing...
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <CheckCircle className="w-5 h-5 mr-2" />
+                            Finish Interview
+                          </div>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={goToNextQuestion}
+                        className={`py-2 px-4 rounded-lg flex items-center ${
+                          isDark
+                            ? "bg-blue-600 hover:bg-blue-700 text-white"
+                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                        }`}
+                      >
+                        Next
+                        <ChevronRight className="w-5 h-5 ml-1" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Input area - Now properly positioned with flex-shrink-0 */}
-      <div className="flex-shrink-0 w-full">
-        <div
-          className={`p-3 rounded-lg ${
-            isDark ? "bg-gray-700" : "bg-gray-100"
-          } flex items-center justify-between`}
-        >
-          <div className="flex-grow">
-            {isRecording ? (
-              <textarea
-                value={transcript}
-                onChange={(e) =>
-                  handleAnswerChange(currentQ?.id, e.target.value)
-                }
-                className={`w-full p-2 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  isDark
-                    ? "bg-gray-800 text-white"
-                    : "bg-white text-gray-800"
-                }`}
-                rows="2"
-                placeholder="Your answer will appear here as you speak..."
-              />
-            ) : (
-              <p
-                className={`text-sm ${
-                  transcript ? "" : "italic text-gray-500"
-                }`}
-              >
-                {transcript ||
-                  "Press the microphone button to start answering"}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            className={`ml-2 p-3 rounded-full ${
-              isRecording
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : isDark
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-            }`}
-          >
-            {isRecording ? (
-              <MicOff className="w-5 h-5" />
-            ) : (
-              <Mic className="w-5 h-5" />
-            )}
-          </button>
+            </div>
+          </motion.div>
         </div>
-
-        {/* Navigation controls - Now properly attached to the input area */}
-        <div
-          className={`mt-4 p-4 rounded-lg shadow-lg ${
-            isDark ? "bg-gray-800" : "bg-white"
-          }`}
-        >
-          <div className="flex justify-between">
-            <button
-              onClick={goToPreviousQuestion}
-              disabled={currentQuestion === 0}
-              className={`py-2 px-4 rounded-lg flex items-center ${
-                currentQuestion === 0
-                  ? isDark
-                    ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : isDark
-                  ? "bg-gray-700 hover:bg-gray-600 text-white"
-                  : "bg-gray-200 hover:bg-gray-300 text-gray-800"
-              }`}
-            >
-              <ChevronLeft className="w-5 h-5 mr-1" />
-              Previous
-            </button>
-
-            {isLastQuestion ? (
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className={`py-2 px-6 rounded-lg ${
-                  isSubmitting
-                    ? "bg-green-500 text-white cursor-wait"
-                    : "bg-green-600 hover:bg-green-700 text-white"
-                } font-medium`}
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center">
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Finishing...
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    Finish Interview
-                  </div>
-                )}
-              </button>
-            ) : (
-              <button
-                onClick={goToNextQuestion}
-                className={`py-2 px-4 rounded-lg flex items-center ${
-                  isDark
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "bg-blue-600 hover:bg-blue-700 text-white"
-                }`}
-              >
-                Next
-                <ChevronRight className="w-5 h-5 ml-1" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  </motion.div>
-</div>
 
         {/* Info Panel - Takes 1/3 on desktop */}
         <div className="md:col-span-1">
@@ -1274,7 +1220,7 @@ const startWebcam = async () => {
               </div>
             </div>
 
-            {currentQ && (
+            {/* {currentQ && (
               <div
                 className={`p-4 rounded-lg ${
                   isDark ? "bg-gray-700" : "bg-gray-100"
@@ -1289,50 +1235,81 @@ const startWebcam = async () => {
                 </p>
                 <p className="font-medium">{currentQ.question}</p>
               </div>
-            )}
+            )} */}
 
-            <div className="mt-4">
-              <button
-                onClick={() => currentQ && toggleSampleAnswer(currentQ.id)}
-                className={`text-sm flex items-center ${
-                  isDark
-                    ? "text-blue-400 hover:text-blue-300"
-                    : "text-blue-600 hover:text-blue-800"
-                }`}
+          {/* Webcam Video Display - Fixed height with proper container */}
+              <div
+                className="mb-4 w-full flex-shrink-0"
+                style={{ height: webcamActive ? "180px" : "80px" }}
               >
-                {showSampleAnswer[currentQ?.id]
-                  ? "Hide sample answer"
-                  : "Show sample answer"}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className={`w-4 h-4 ml-1 transition-transform ${
-                    showSampleAnswer[currentQ?.id] ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-
-              {currentQ && showSampleAnswer[currentQ.id] && (
-                <div
-                  className={`mt-3 p-3 text-sm rounded-lg ${
-                    isDark
-                      ? "bg-blue-900/20 text-blue-200"
-                      : "bg-blue-50 text-blue-800"
-                  }`}
-                >
-                  {currentQ.sampleAnswer}
-                </div>
-              )}
-            </div>
+                {webcamActive ? (
+                  <div
+                    className={`relative rounded-lg overflow-hidden h-full ${
+                      isDark ? "bg-gray-900" : "bg-gray-200"
+                    }`}
+                  >
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full rounded-lg"
+                      style={{ objectFit: "contain" }}
+                    />
+                    <div className="absolute bottom-2 right-2 flex space-x-2">
+                      <button
+                        onClick={toggleWebcam}
+                        className={`p-2 rounded-full bg-gray-800 bg-opacity-70 text-white`}
+                        title="Toggle camera"
+                      >
+                        <CameraOff className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`rounded-lg flex items-center justify-center h-full ${
+                      isDark ? "bg-gray-900" : "bg-gray-200"
+                    }`}
+                  >
+                    {isRequestingWebcam ? (
+                      <div className="flex items-center text-sm">
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Requesting camera access...
+                      </div>
+                    ) : webcamPermission === "denied" ? (
+                      <div className="flex flex-col items-center text-sm p-2">
+                        <p className="mb-2">Camera access was denied.</p>
+                        <button
+                          onClick={startWebcam}
+                          className={`flex items-center px-3 py-1 rounded-md ${
+                            isDark
+                              ? "bg-blue-600 hover:bg-blue-700 text-white"
+                              : "bg-blue-600 hover:bg-blue-700 text-white"
+                          }`}
+                        >
+                          <Camera className="w-3 h-3 mr-1" />
+                          Try again
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={startWebcam}
+                        className={`flex items-center px-4 py-2 rounded-md ${
+                          isDark
+                            ? "bg-blue-600 hover:bg-blue-700 text-white"
+                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                        }`}
+                      >
+                        <Camera className="w-4 h-4 mr-2" />
+                        {webcamPermission === "unavailable"
+                          ? "No camera detected"
+                          : "Enable camera"}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
             <div className="mt-6 flex justify-center">
               <button

@@ -297,7 +297,7 @@ const AboutPage = () => {
             className="order-2 md:order-1"
           >
             <img 
-              src="https://thumbs.dreamstime.com/b/hand-drawn-lettering-our-story-shadow-highlights-elegant-modern-handwritten-calligraphy-vector-ink-illustration-hand-140996224.jpg" 
+              src="https://static.vecteezy.com/system/resources/previews/023/891/742/non_2x/story-telling-button-speech-bubble-banner-label-storytelling-vector.jpg" 
               alt="Our journey" 
               className="rounded-xl shadow-xl w-full hover:shadow-2xl transition-shadow duration-300 object-cover h-full" 
             />
