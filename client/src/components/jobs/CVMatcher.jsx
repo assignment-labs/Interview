@@ -1,5 +1,5 @@
 // src/components/jobs/CVMatcher.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,8 +12,23 @@ const CVMatcher = () => {
   const [error, setError] = useState('');
   const [scrapingProgress, setScrapingProgress] = useState(null);
   const [expandedJobs, setExpandedJobs] = useState({});
-  const [filterByJobTitle, setFilterByJobTitle] = useState(true); // Default to filter by job title
-
+  
+  // Enhanced filtering options
+  const [filterSettings, setFilterSettings] = useState({
+    byJobTitle: true,
+    bySkills: true,
+    byLocation: false,
+    byExperience: false,
+    minimumMatchScore: 0.3,
+    maximumResults: 20
+  });
+  
+  // Filter UI visibility
+  const [showFilterOptions, setShowFilterOptions] = useState(false);
+  
+  // All jobs data (before filtering)
+  const [allJobsData, setAllJobsData] = useState([]);
+  
   // Handle file upload
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -41,7 +56,7 @@ const CVMatcher = () => {
       const formData = new FormData();
       formData.append('cv', file);
 
-      // Add file content as text for parsing (fix for potential backend issue)
+      // Add file content as text for parsing
       const fileContent = await readFileAsText(file);
       formData.append('fileContent', fileContent);
 
@@ -51,66 +66,30 @@ const CVMatcher = () => {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
-        // Add withCredentials for CORS if needed
         withCredentials: true
       });
+      
+      console.log('CV processing response:', response.data);
       
       if (response.data.success) {
         const profileInfo = response.data.profileInfo;
         setExtractedInfo(profileInfo);
         setScrapingProgress('Finding matching jobs...');
         
-        // Get all jobs data
-        let jobsData = response.data.jobs || [];
+        // Fetch all jobs first, then perform client-side filtering
+        const jobsResponse = await axios.get('http://localhost:5000/api/jobs?limit=100');
         
-        // Filter by job title if option is enabled and a job title was extracted
-        if (filterByJobTitle && profileInfo && profileInfo.jobTitle) {
-          setScrapingProgress(`Filtering jobs matching "${profileInfo.jobTitle}" title...`);
-          
-          // Filter jobs that match the extracted job title
-          const jobTitleWords = profileInfo.jobTitle.toLowerCase().split(/\s+/);
-          jobsData = jobsData.filter(job => {
-            const jobTitle = job.title.toLowerCase();
-            // Check if any of the job title words match
-            return jobTitleWords.some(word => 
-              word.length > 3 && jobTitle.includes(word)
-            );
-          });
-          
-          // Add a title match score for sorting
-          jobsData = jobsData.map(job => {
-            const jobTitle = job.title.toLowerCase();
-            let titleMatchScore = 0;
-            
-            // Calculate a simple match score based on word overlap
-            jobTitleWords.forEach(word => {
-              if (word.length > 3 && jobTitle.includes(word)) {
-                titleMatchScore += 1;
-              }
-            });
-            
-            // Normalize score
-            titleMatchScore = titleMatchScore / jobTitleWords.length;
-            
-            // Combine with existing match score if available
-            const finalMatchScore = job.matchScore ? 
-              (job.matchScore + titleMatchScore) / 2 : 
-              titleMatchScore;
-            
-            return {
-              ...job,
-              matchScore: finalMatchScore,
-              titleMatch: true
-            };
-          });
+        if (!jobsResponse.data.success) {
+          throw new Error('Failed to fetch jobs data');
         }
         
-        // Sort by match score if available
-        if (jobsData.length > 0 && 'matchScore' in jobsData[0]) {
-          jobsData.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
-        }
+        // Store all jobs data
+        const jobsData = jobsResponse.data.data || [];
+        setAllJobsData(jobsData);
+        console.log(`Fetched ${jobsData.length} jobs from API`);
         
-        setJobListings(jobsData);
+        // Apply filtering
+        filterJobs(jobsData, profileInfo, filterSettings);
       } else {
         setError(response.data.message || 'Failed to process CV');
       }
@@ -127,6 +106,303 @@ const CVMatcher = () => {
       setIsLoading(false);
     }
   };
+  
+  // New function to apply filtering based on settings
+  const filterJobs = (jobsData, profileInfo, filters) => {
+    if (!profileInfo) {
+      setJobListings([]);
+      return;
+    }
+    
+    let filteredJobs = [...jobsData];
+    
+    // Apply job title filter
+    if (filters.byJobTitle && profileInfo.jobTitle) {
+      setScrapingProgress(`Filtering jobs matching "${profileInfo.jobTitle}" title...`);
+      
+      // Normalize and tokenize job title
+      const jobTitleLower = profileInfo.jobTitle.toLowerCase().trim();
+      const jobTitleWords = jobTitleLower.split(/[\s,\/&+()-]+/).filter(word => word.length > 2);
+      
+      // Create variants for common job titles to improve matching
+      const jobVariants = createJobTitleVariants(jobTitleLower);
+      
+      filteredJobs = filteredJobs.filter(job => {
+        if (!job.title) return false;
+        
+        const jobTitle = job.title.toLowerCase().trim();
+        
+        // Check for direct partial matches
+        const directMatch = jobTitleWords.some(word => 
+          jobTitle.includes(word)
+        );
+        
+        // Check for variant matches
+        const variantMatch = jobVariants.some(variant => 
+          jobTitle.includes(variant)
+        );
+        
+        return directMatch || variantMatch;
+      });
+      
+      console.log(`Found ${filteredJobs.length} jobs after title filtering`);
+    }
+    
+    // Apply location filter
+    if (filters.byLocation && profileInfo.location) {
+      setScrapingProgress(`Filtering jobs matching "${profileInfo.location}" location...`);
+      
+      const locationLower = profileInfo.location.toLowerCase().trim();
+      const locationWords = locationLower.split(/[\s,]+/).filter(word => word.length > 2);
+      
+      filteredJobs = filteredJobs.filter(job => {
+        if (!job.location) return false;
+        
+        const jobLocation = job.location.toLowerCase().trim();
+        
+        // Check for location matches
+        return locationWords.some(word => jobLocation.includes(word));
+      });
+      
+      console.log(`Found ${filteredJobs.length} jobs after location filtering`);
+    }
+    
+    // Apply experience level filter
+    if (filters.byExperience && profileInfo.experience) {
+      setScrapingProgress('Filtering jobs by experience level...');
+      
+      const expYears = parseInt(profileInfo.experience);
+      if (!isNaN(expYears)) {
+        filteredJobs = filteredJobs.filter(job => {
+          if (!job.experience) return true; // Keep if no experience specified
+          
+          // Map job experience levels to year ranges
+          const expRanges = {
+            'Entry-level': [0, 2],
+            'Mid-level': [2, 5],
+            'Senior': [5, 10],
+            'Executive': [8, 100]
+          };
+          
+          const range = expRanges[job.experience];
+          if (!range) return true;
+          
+          // Check if candidate experience falls within range
+          return expYears >= range[0] && expYears <= range[1];
+        });
+        
+        console.log(`Found ${filteredJobs.length} jobs after experience filtering`);
+      }
+    }
+    
+    // Calculate match scores for each job
+    filteredJobs = filteredJobs.map(job => {
+      let matchScore = 0;
+      
+      // Title match score
+      if (profileInfo.jobTitle) {
+        const jobTitle = (job.title || '').toLowerCase();
+        const candidateTitle = profileInfo.jobTitle.toLowerCase();
+        const candidateTitleWords = candidateTitle.split(/[\s,\/&+()-]+/).filter(word => word.length > 2);
+        
+        const titleScore = calculateJobMatchScore(jobTitle, candidateTitle, candidateTitleWords, profileInfo.skills || []);
+        matchScore += titleScore * 0.5; // Title is 50% of total score
+      }
+      
+      // Skills match score
+      if (filters.bySkills && profileInfo.skills && profileInfo.skills.length > 0) {
+        const skillScore = calculateSkillsMatchScore(job.skills || [], profileInfo.skills);
+        matchScore += skillScore * 0.4; // Skills are 40% of total score
+      }
+      
+      // Location match score
+      if (filters.byLocation && profileInfo.location && job.location) {
+        const locationLower = profileInfo.location.toLowerCase().trim();
+        const jobLocation = job.location.toLowerCase().trim();
+        
+        // Simple location matching
+        if (jobLocation.includes(locationLower) || locationLower.includes(jobLocation)) {
+          matchScore += 0.1; // Location is 10% of total score
+        }
+      }
+      
+      return {
+        ...job,
+        matchScore,
+        titleMatch: matchScore > filters.minimumMatchScore
+      };
+    });
+    
+    // Filter by minimum match score
+    filteredJobs = filteredJobs.filter(job => job.matchScore >= filters.minimumMatchScore);
+    
+    // Sort by match score
+    filteredJobs.sort((a, b) => b.matchScore - a.matchScore);
+    
+    // Limit number of results
+    if (filters.maximumResults > 0) {
+      filteredJobs = filteredJobs.slice(0, filters.maximumResults);
+    }
+    
+    setJobListings(filteredJobs);
+    console.log(`Displaying ${filteredJobs.length} matched jobs`);
+  };
+  
+  // Calculate skills match score
+  const calculateSkillsMatchScore = (jobSkills, candidateSkills) => {
+    if (!jobSkills || !jobSkills.length || !candidateSkills || !candidateSkills.length) {
+      return 0;
+    }
+    
+    const jobSkillsLower = jobSkills.map(skill => skill.toLowerCase().trim());
+    const candidateSkillsLower = candidateSkills.map(skill => skill.toLowerCase().trim());
+    
+    // Count matching skills
+    let matchCount = 0;
+    
+    for (const candidateSkill of candidateSkillsLower) {
+      for (const jobSkill of jobSkillsLower) {
+        if (jobSkill.includes(candidateSkill) || candidateSkill.includes(jobSkill)) {
+          matchCount++;
+          break;
+        }
+      }
+    }
+    
+    // Calculate match percentage
+    const candidateSkillsCount = candidateSkillsLower.length;
+    const jobSkillsCount = jobSkillsLower.length;
+    
+    // Use harmonic mean to balance the importance of matching both ways
+    if (matchCount === 0) return 0;
+    
+    const candidateRatio = matchCount / candidateSkillsCount;
+    const jobRatio = matchCount / jobSkillsCount;
+    
+    return 2 * (candidateRatio * jobRatio) / (candidateRatio + jobRatio);
+  };
+  
+  // Create variants of common job titles to improve matching
+  const createJobTitleVariants = (jobTitle) => {
+    const variants = [];
+    
+    // Common job title equivalents
+    const jobEquivalents = {
+      'engineer': ['engineer', 'developer', 'programmer', 'coder', 'technician'],
+      'developer': ['developer', 'engineer', 'programmer', 'coder'],
+      'designer': ['designer', 'artist', 'creative'],
+      'manager': ['manager', 'director', 'lead', 'head', 'supervisor'],
+      'assistant': ['assistant', 'associate', 'coordinator'],
+      'administrator': ['administrator', 'admin', 'manager'],
+      'analyst': ['analyst', 'specialist', 'consultant'],
+      'executive': ['executive', 'officer', 'manager', 'director']
+    };
+    
+    // Match job domains
+    const domainMatches = {
+      'software': ['software', 'application', 'web', 'mobile', 'frontend', 'backend', 'fullstack', 'full-stack', 'front-end', 'back-end'],
+      'web': ['web', 'frontend', 'front-end', 'ui', 'website'],
+      'data': ['data', 'database', 'sql', 'analytics', 'big data'],
+      'ui': ['ui', 'ux', 'user interface', 'user experience', 'frontend'],
+      'marketing': ['marketing', 'digital marketing', 'seo', 'content'],
+      'sales': ['sales', 'business development', 'account'],
+      'finance': ['finance', 'accounting', 'financial']
+    };
+    
+    // Add the original job title
+    variants.push(jobTitle);
+    
+    // Generate variants based on job title parts
+    const words = jobTitle.split(/\s+/);
+    
+    // Look for role words (like "engineer")
+    for (const word of words) {
+      if (jobEquivalents[word]) {
+        // Add equivalent roles
+        for (const equivalent of jobEquivalents[word]) {
+          if (equivalent !== word) {
+            const newVariant = jobTitle.replace(word, equivalent);
+            variants.push(newVariant);
+          }
+        }
+      }
+      
+      // Look for domain words (like "software")
+      if (domainMatches[word]) {
+        for (const domain of domainMatches[word]) {
+          if (domain !== word) {
+            const newVariant = jobTitle.replace(word, domain);
+            variants.push(newVariant);
+          }
+        }
+      }
+    }
+    
+    // Special case for "Software Engineer" and similar tech roles
+    if (jobTitle.includes('software') || jobTitle.includes('developer') || jobTitle.includes('programmer')) {
+      variants.push('engineer');
+      variants.push('developer');
+      variants.push('programmer');
+      variants.push('coder');
+      variants.push('software');
+      variants.push('web');
+      variants.push('application');
+    }
+    
+    return [...new Set(variants)]; // Remove duplicates
+  };
+  
+  // Calculate match score between job title and candidate's job title
+  const calculateJobMatchScore = (jobTitle, candidateTitle, candidateTitleWords, candidateSkills = []) => {
+    let score = 0;
+    
+    // 1. Direct title similarity (word overlap)
+    let matchingWords = 0;
+    for (const word of candidateTitleWords) {
+      if (word.length > 2 && jobTitle.includes(word)) {
+        matchingWords++;
+        // Give higher weight to longer words (more specific terms)
+        score += (word.length > 5) ? 0.15 : 0.1;
+      }
+    }
+    
+    // Bonus for high proportion of matching words
+    if (matchingWords > 0 && candidateTitleWords.length > 0) {
+      const matchRatio = matchingWords / candidateTitleWords.length;
+      score += matchRatio * 0.3;
+    }
+    
+    // 2. Exact role match bonuses
+    const roles = ['engineer', 'developer', 'designer', 'manager', 'analyst', 'administrator'];
+    for (const role of roles) {
+      if (jobTitle.includes(role) && candidateTitle.includes(role)) {
+        score += 0.25; // Significant bonus for exact role match
+        break;
+      }
+    }
+    
+    // 3. Domain match bonuses (frontend, backend, fullstack, etc.)
+    const domains = ['frontend', 'front-end', 'backend', 'back-end', 'fullstack', 'full-stack', 
+                    'web', 'mobile', 'data', 'cloud', 'devops', 'security', 'ui', 'ux'];
+    for (const domain of domains) {
+      if (jobTitle.includes(domain) && candidateTitle.includes(domain)) {
+        score += 0.2; // Good bonus for domain match
+        break;
+      }
+    }
+    
+    // 4. Seniority match (junior, senior, lead, etc.)
+    const seniorityLevels = ['junior', 'senior', 'lead', 'principal', 'head', 'chief'];
+    for (const level of seniorityLevels) {
+      if (jobTitle.includes(level) && candidateTitle.includes(level)) {
+        score += 0.15;
+        break;
+      }
+    }
+    
+    // Cap the score at 1.0
+    return Math.min(score, 1.0);
+  };
 
   // Helper function to read file as text
   const readFileAsText = (file) => {
@@ -141,6 +417,13 @@ const CVMatcher = () => {
       reader.readAsText(file);
     });
   };
+
+  // Apply filters when filter settings change
+  useEffect(() => {
+    if (extractedInfo && allJobsData.length > 0) {
+      filterJobs(allJobsData, extractedInfo, filterSettings);
+    }
+  }, [filterSettings]);
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -198,12 +481,48 @@ const CVMatcher = () => {
     );
   };
 
-  // Toggle job title filtering
-  const toggleJobTitleFilter = () => {
-    setFilterByJobTitle(!filterByJobTitle);
-    // Reprocess CV if we have already processed it once
-    if (extractedInfo) {
-      processCV();
+  // Update filter settings
+  const handleFilterChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    setFilterSettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // Debugging helper function for API issues
+  const checkApiStatus = async () => {
+    setIsLoading(true);
+    setScrapingProgress('Checking API connection...');
+    
+    try {
+      // Check if API is responsive
+      const response = await axios.get('http://localhost:5000/api/health');
+      
+      if (response.status === 200) {
+        setScrapingProgress('API is connected, fetching job listings...');
+        // Fetch available jobs to check data structure
+        const jobsResponse = await axios.get('http://localhost:5000/api/jobs?limit=5');
+        
+        if (jobsResponse.data.success && jobsResponse.data.data.length > 0) {
+          // Log the structure for debugging
+          console.log('Job data structure example:', jobsResponse.data.data[0]);
+          setScrapingProgress('Jobs API working correctly');
+        } else {
+          setError('Job API returned success but no jobs found. Please check database.');
+        }
+      } else {
+        setError('API health check failed. Status: ' + response.status);
+      }
+    } catch (err) {
+      console.error('API connection error:', err);
+      setError(
+        'Cannot connect to API. Please ensure the backend server is running at http://localhost:5000'
+      );
+    } finally {
+      setIsLoading(false);
+      setScrapingProgress(null);
     }
   };
 
@@ -259,7 +578,7 @@ const CVMatcher = () => {
               </p>
             )}
           </div>
-          <div>
+          <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:space-x-2">
             <button
               onClick={processCV}
               disabled={isLoading || !file}
@@ -267,40 +586,183 @@ const CVMatcher = () => {
             >
               {isLoading ? 'Processing...' : 'Find Matching Jobs'}
             </button>
+            
+            <button
+              onClick={() => setShowFilterOptions(!showFilterOptions)}
+              disabled={isLoading}
+              className="w-full md:w-auto inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-4 w-4 mr-2" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              {showFilterOptions ? 'Hide Filters' : 'Show Filters'}
+            </button>
+            
+            {/* API Debug button */}
+            <button
+              onClick={checkApiStatus}
+              disabled={isLoading}
+              className="w-full md:w-auto inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md shadow-sm text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-4 w-4 mr-2" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Check API
+            </button>
           </div>
         </div>
         
-        {/* Filter by job title toggle */}
-        <div className="mt-4 flex items-center">
-          <label className="inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterByJobTitle}
-              onChange={toggleJobTitleFilter}
-              className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
-            />
-            <span className="ml-2 text-sm text-gray-700">
-              Filter jobs by my job title
-            </span>
-          </label>
-          <div className="ml-2 group relative">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-gray-400 group-hover:text-gray-500"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+        {/* Enhanced Filter Options */}
+        <AnimatePresence>
+          {showFilterOptions && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mt-4 bg-gray-50 p-4 rounded-md"
             >
-              <path
-                fillRule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div className="absolute left-0 bottom-full mb-2 w-60 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-              When enabled, we'll find jobs with titles similar to your CV's role
-            </div>
-          </div>
-        </div>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Filter Options</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center mb-3">
+                    <input
+                      id="filter-job-title"
+                      name="byJobTitle"
+                      type="checkbox"
+                      checked={filterSettings.byJobTitle}
+                      onChange={handleFilterChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="filter-job-title" className="ml-2 block text-sm text-gray-700">
+                      Filter by job title
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center mb-3">
+                    <input
+                      id="filter-skills"
+                      name="bySkills"
+                      type="checkbox"
+                      checked={filterSettings.bySkills}
+                      onChange={handleFilterChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="filter-skills" className="ml-2 block text-sm text-gray-700">
+                      Filter by skills
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center mb-3">
+                    <input
+                      id="filter-location"
+                      name="byLocation"
+                      type="checkbox"
+                      checked={filterSettings.byLocation}
+                      onChange={handleFilterChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="filter-location" className="ml-2 block text-sm text-gray-700">
+                      Filter by location
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <input
+                      id="filter-experience"
+                      name="byExperience"
+                      type="checkbox"
+                      checked={filterSettings.byExperience}
+                      onChange={handleFilterChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="filter-experience" className="ml-2 block text-sm text-gray-700">
+                      Filter by experience level
+                    </label>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="mb-3">
+                    <label htmlFor="minimum-match" className="block text-sm text-gray-700 mb-1">
+                      Minimum match score ({Math.round(filterSettings.minimumMatchScore * 100)}%)
+                    </label>
+                    <input
+                      id="minimum-match"
+                      name="minimumMatchScore"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={filterSettings.minimumMatchScore}
+                      onChange={handleFilterChange}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>0%</span>
+                      <span>50%</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="maximum-results" className="block text-sm text-gray-700 mb-1">
+                      Maximum results to show
+                    </label>
+                    <select
+                      id="maximum-results"
+                      name="maximumResults"
+                      value={filterSettings.maximumResults}
+                      onChange={handleFilterChange}
+                      className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    >
+                      <option value="5">5 results</option>
+                      <option value="10">10 results</option>
+                      <option value="20">20 results</option>
+                      <option value="50">50 results</option>
+                      <option value="100">100 results</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => {
+                    // Reset to default filter settings
+                    setFilterSettings({
+                      byJobTitle: true,
+                      bySkills: true,
+                      byLocation: false,
+                      byExperience: false,
+                      minimumMatchScore: 0.3,
+                      maximumResults: 20
+                    });
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                  </svg>
+                  Reset Filters
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {error && (
           <div className="mt-2 text-sm text-red-600">
@@ -333,20 +795,34 @@ const CVMatcher = () => {
               <p className="text-sm font-medium text-gray-500">Job Title</p>
               <p className="text-base text-gray-900 flex items-center">
                 {extractedInfo.jobTitle || 'Not detected'}
-                {extractedInfo.jobTitle && filterByJobTitle && (
+                {extractedInfo.jobTitle && filterSettings.byJobTitle && (
                   <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Filtering jobs by this title
+                    Filtering by title
                   </span>
                 )}
               </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Experience</p>
-              <p className="text-base text-gray-900">{extractedInfo.experience || 'Not detected'} {extractedInfo.experience ? 'years' : ''}</p>
+              <p className="text-base text-gray-900 flex items-center">
+                {extractedInfo.experience || 'Not detected'} {extractedInfo.experience ? 'years' : ''}
+                {extractedInfo.experience && filterSettings.byExperience && (
+                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Filtering by experience
+                  </span>
+                )}
+              </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Location</p>
-              <p className="text-base text-gray-900">{extractedInfo.location || 'Not detected'}</p>
+              <p className="text-base text-gray-900 flex items-center">
+                {extractedInfo.location || 'Not detected'}
+                {extractedInfo.location && filterSettings.byLocation && (
+                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Filtering by location
+                  </span>
+                )}
+              </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Industry</p>
@@ -359,6 +835,11 @@ const CVMatcher = () => {
                   extractedInfo.skills.map((skill, index) => (
                     <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       {skill}
+                      {filterSettings.bySkills && (
+                        <svg className="ml-1 h-3 w-3 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
                     </span>
                   )) : 
                   <span className="text-gray-700">No skills detected</span>
@@ -374,9 +855,9 @@ const CVMatcher = () => {
         <div>
           <h3 className="text-lg font-medium text-gray-900 mb-4">
             Matching Jobs ({jobListings.length})
-            {extractedInfo && extractedInfo.jobTitle && filterByJobTitle && (
+            {extractedInfo && (
               <span className="ml-2 text-sm text-gray-500">
-                filtered by job title "{extractedInfo.jobTitle}"
+                with minimum {Math.round(filterSettings.minimumMatchScore * 100)}% match score
               </span>
             )}
           </h3>
@@ -397,7 +878,7 @@ const CVMatcher = () => {
                     <div className="flex-1">
                       <div className="flex items-center">
                         <Link
-                          to={`/jobs/${job._id}`}
+                          to={`/job/${job._id}`}
                           className="text-lg font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
                         >
                           {job.title}
@@ -542,7 +1023,7 @@ const CVMatcher = () => {
                   {/* Actions */}
                   <div className="mt-4 flex justify-end">
                     <Link
-                      to={`/jobs/${job._id}`}
+                      to={`/job/${job._id}`}
                       className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
                     >
                       View Job
@@ -598,20 +1079,26 @@ const CVMatcher = () => {
             <div className="ml-3">
               <h3 className="text-sm font-medium text-yellow-800">No matching jobs found</h3>
               <div className="mt-2 text-sm text-yellow-700">
-                <p>We couldn't find any jobs matching your profile. Try the following:</p>
+                <p>We couldn't find any jobs matching your profile with the current filter settings. Try the following:</p>
                 <ul className="list-disc pl-5 space-y-1 mt-2">
-                  <li>Check if your CV is up-to-date with your latest skills and experience</li>
-                  <li>Try uploading a more detailed CV</li>
-                  <li>Consider broadening your search criteria</li>
-                  <li>Or browse all available jobs on our job board</li>
+                  <li>Lower the minimum match score in filter settings</li>
+                  <li>Disable some of the filters to see more results</li>
+                  <li>Upload a more detailed CV with clearer job title and skills</li>
+                  <li>Browse all available jobs on our job board</li>
                 </ul>
               </div>
               <div className="mt-4 flex space-x-4">
                 <button
-                  onClick={processCV}
+                  onClick={() => {
+                    // Lower the minimum match score to see more results
+                    setFilterSettings(prev => ({
+                      ...prev,
+                      minimumMatchScore: 0.1
+                    }));
+                  }}
                   className="text-sm font-medium text-yellow-800 hover:text-yellow-700"
                 >
-                  Try again
+                  Lower match threshold
                 </button>
                 <Link
                   to="/jobs"

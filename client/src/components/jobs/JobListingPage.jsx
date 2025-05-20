@@ -664,7 +664,7 @@ const JobListingPage = () => {
                     <div className="flex flex-col sm:flex-row justify-between items-start">
                       <div className="flex-1">
                         <Link
-                          to={`/jobs/${job._id}`}
+                          to={`/job/${job._id}`}
                           className="text-xl font-medium text-blue-600 hover:text-blue-800 hover:underline transition duration-150"
                         >
                           {job.title}
@@ -782,7 +782,7 @@ const JobListingPage = () => {
                         whileTap={{ scale: 0.95 }}
                       >
                         <Link
-                          to={`/jobs/${job._id}`}
+                          to={`/job/${job._id}`}
                           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition duration-150"
                         >
                           View Details
