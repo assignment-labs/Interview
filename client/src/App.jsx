@@ -40,14 +40,13 @@ import PostJobPage from "./components/jobs/PostJobPage";
 import EditJobPage from "./components/jobs/EditJobPage";
 import JobApplicantsPage from "./components/jobs/JobApplicantsPage";
 
-
 // Import the interview components
-import InterviewDashboard from './components/interview/InterviewDashboard';
-import InterviewCreate from './components/interview/InterviewCreate';
-import InterviewSession from './components/interview/InterviewSession';
-import InterviewFeedback from './components/interview/InterviewFeedback';
-import InterviewHistoryPage from './components/interviews/InterviewHistoryPage';
-import InterviewPerformance from './components/interview/InterviewPerformance';
+import InterviewDashboard from "./components/interview/InterviewDashboard";
+import InterviewCreate from "./components/interview/InterviewCreate";
+import InterviewSession from "./components/interview/InterviewSession";
+import InterviewFeedback from "./components/interview/InterviewFeedback";
+import InterviewHistoryPage from "./components/interviews/InterviewHistoryPage";
+import InterviewPerformance from "./components/interview/InterviewPerformance";
 
 // import InterviewPage from "./components/interviews/InterviewPage";
 // import InterviewDetailPage from "./components/interviews/InterviewDetailPage";
@@ -212,54 +211,54 @@ function App() {
               /> */}
 
               {/* Interview Routes */}
-<Route 
-  path="/interviews" 
-  element={
-    <ProtectedRoute>
-      <InterviewDashboard />
-    </ProtectedRoute>
-  } 
-/>
-<Route 
-  path="/interviews/create" 
-  element={
-    <ProtectedRoute>
-      <InterviewCreate />
-    </ProtectedRoute>
-  } 
-/>
-<Route 
-  path="/interviews/:id" 
-  element={
-    <ProtectedRoute>
-      <InterviewSession />
-    </ProtectedRoute>
-  } 
-/>
-<Route 
-  path="/interviews/:id/feedback" 
-  element={
-    <ProtectedRoute>
-      <InterviewFeedback />
-    </ProtectedRoute>
-  } 
-/>
-<Route 
-  path="/interviews/history" 
-  element={
-    <ProtectedRoute>
-      <InterviewHistoryPage />
-    </ProtectedRoute>
-  } 
-/>
-<Route 
-  path="/interviews/performance" 
-  element={
-    <ProtectedRoute>
-      <InterviewPerformance />
-    </ProtectedRoute>
-  } 
-/>
+              <Route
+                path="/interviews"
+                element={
+                  <ProtectedRoute>
+                    <InterviewDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/interviews/create"
+                element={
+                  <ProtectedRoute>
+                    <InterviewCreate />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/interviews/:id"
+                element={
+                  <ProtectedRoute>
+                    <InterviewSession />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/interviews/:id/feedback"
+                element={
+                  <ProtectedRoute>
+                    <InterviewFeedback />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/interviews/history"
+                element={
+                  <ProtectedRoute>
+                    <InterviewHistoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/interviews/performance"
+                element={
+                  <ProtectedRoute>
+                    <InterviewPerformance />
+                  </ProtectedRoute>
+                }
+              />
               {/* Fallback route */}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

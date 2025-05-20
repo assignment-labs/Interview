@@ -1,6 +1,6 @@
 // src/redux/store.js
 import { createStore, applyMiddleware, combineReducers } from 'redux';
-import { thunk } from 'redux-thunk'; // Fixed import syntax
+import { thunk } from 'redux-thunk'; 
 import authReducer from './reducers/authReducer';
 
 // Combine all reducers

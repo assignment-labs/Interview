@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -14,7 +13,7 @@ const app = express();
 
 // Configure CORS properly - this needs to be before your routes
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Your frontend URL
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000', 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -26,7 +25,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // File upload middleware
 app.use(fileUpload({
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 }, 
   abortOnLimit: true,
   createParentPath: true,
   useTempFiles: true,
@@ -48,7 +47,8 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/applications', require('./routes/applications'));
 app.use('/api/resources', require('./routes/resources'));
 app.use('/api/stats', require('./routes/stats'));
-app.use('/api/interviews', require('./routes/interviews')); // Added for interview mocker
+app.use('/api/interviews', require('./routes/interviews')); 
+app.use('/api/scraper', require('./routes/jobScraperRoutes'));
 
 // Basic route for testing API
 app.get('/api/test', (req, res) => {

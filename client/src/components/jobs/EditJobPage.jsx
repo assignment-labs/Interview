@@ -1,7 +1,8 @@
-// src/pages/EditJobPage.jsx
+// src/pages/jobs/EditJobPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import authHelpers from '../../utils/authHelpers';
 
 const EditJobPage = () => {
   const { id } = useParams();
@@ -32,19 +33,19 @@ const EditJobPage = () => {
   useEffect(() => {
     const fetchJobDetails = async () => {
       try {
-        const token = localStorage.getItem('token');
+        // Setup auth token using the helper
+        const formattedToken = authHelpers.setupAuthToken();
         
-        if (!token) {
+        if (!formattedToken) {
           setError('You must be logged in to edit a job');
           setLoading(false);
+          setTimeout(() => navigate('/login'), 1000);
           return;
         }
 
-        const config = {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        };
+        // Get auth config from helper
+        const config = authHelpers.getAuthConfig();
+        console.log('Fetching job details with token:', formattedToken);
 
         const response = await axios.get(`http://localhost:5000/api/jobs/${id}`, config);
         
@@ -76,12 +77,11 @@ const EditJobPage = () => {
           });
         }
       } catch (err) {
+        console.error('Error fetching job details:', err);
         setError(err.response?.data?.message || 'Error fetching job details. Please try again.');
         
-        // If unauthorized, redirect to dashboard
-        if (err.response?.status === 401 || err.response?.status === 403) {
-          navigate('http://localhost:5000/dashboard/employer');
-        }
+        // Use auth helper to handle auth errors
+        authHelpers.handleAuthError(err, navigate);
       } finally {
         setLoading(false);
       }
@@ -126,6 +126,14 @@ const EditJobPage = () => {
     }
   };
 
+  // Handle skill input key press (add on Enter)
+  const handleSkillKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addSkill();
+    }
+  };
+
   // Remove a skill
   const removeSkill = (skillToRemove) => {
     setFormData({
@@ -141,31 +149,35 @@ const EditJobPage = () => {
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
+      // Setup auth token using the helper
+      const formattedToken = authHelpers.setupAuthToken();
       
-      if (!token) {
+      if (!formattedToken) {
         setError('You must be logged in to update a job');
         setSubmitting(false);
+        setTimeout(() => navigate('/login'), 1000);
         return;
       }
 
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        }
-      };
+      // Get JSON auth config from helper
+      const config = authHelpers.getJsonAuthConfig();
+      console.log('Updating job with token:', formattedToken);
 
       const response = await axios.put(`http://localhost:5000/api/jobs/${id}`, formData, config);
       
-      setSubmitting(false);
-      
       if (response.data.success) {
-        navigate('/dashboard/employer');
+        navigate('/dashboard/employer', { 
+          state: { message: 'Job updated successfully!' }
+        });
       }
     } catch (err) {
-      setSubmitting(false);
+      console.error('Error updating job:', err);
       setError(err.response?.data?.message || 'Error updating job. Please try again.');
+      
+      // Use auth helper to handle auth errors
+      authHelpers.handleAuthError(err, navigate);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -176,33 +188,39 @@ const EditJobPage = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      // Setup auth token using the helper
+      const formattedToken = authHelpers.setupAuthToken();
       
-      if (!token) {
+      if (!formattedToken) {
         setError('You must be logged in to delete a job');
+        setTimeout(() => navigate('/login'), 1000);
         return;
       }
 
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
+      // Get auth config from helper
+      const config = authHelpers.getAuthConfig();
+      console.log('Deleting job with token:', formattedToken);
 
       const response = await axios.delete(`http://localhost:5000/api/jobs/${id}`, config);
       
       if (response.data.success) {
-        navigate('/dashboard/employer');
+        navigate('/dashboard/employer', { 
+          state: { message: 'Job deleted successfully!' }
+        });
       }
     } catch (err) {
+      console.error('Error deleting job:', err);
       setError(err.response?.data?.message || 'Error deleting job. Please try again.');
+      
+      // Use auth helper to handle auth errors
+      authHelpers.handleAuthError(err, navigate);
     }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="spinner">Loading...</div>
+        <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent border-solid rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -361,6 +379,7 @@ const EditJobPage = () => {
                     id="skills"
                     value={skillInput}
                     onChange={handleSkillInputChange}
+                    onKeyPress={handleSkillKeyPress}
                     className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-l-md"
                     placeholder="e.g. JavaScript, React, etc."
                   />
@@ -451,32 +470,41 @@ const EditJobPage = () => {
                     id="contactEmail"
                     value={formData.contactEmail}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"/>
-                    </div>
-                  </div>
+                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  />
                 </div>
-    
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/dashboard/employer')}
-                    className="mr-3 bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting || formData.skills.length === 0}
-                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {submitting ? 'Saving...' : 'Save Changes'}
-                  </button>
-                </div>
-              </form>
+              </div>
             </div>
-          </div>
-        </div>
-      );
-    };
     
-    export default EditJobPage;
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/employer')}
+                className="mr-3 bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || formData.skills.length === 0}
+                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {submitting ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </span>
+                ) : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EditJobPage;

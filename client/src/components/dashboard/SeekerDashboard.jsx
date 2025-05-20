@@ -66,7 +66,7 @@ const SeekerDashboard = () => {
     fetchSeekerData(formattedToken);
   }, [navigate, location]);
 
-  // In the fetchSeekerData function, update the saved jobs fetching:
+  // Fetch all data for the job seeker dashboard
   const fetchSeekerData = async (token) => {
     setLoading(true);
     try {
@@ -88,6 +88,7 @@ const SeekerDashboard = () => {
         // Continue with other API calls using the api instance
         try {
           const applicationsResponse = await api.get('/applications/me');
+          console.log('Applications data:', applicationsResponse.data);
           setApplications(applicationsResponse.data.data || []);
         } catch (appErr) {
           console.error('Error fetching applications using api instance:', appErr);
@@ -96,6 +97,7 @@ const SeekerDashboard = () => {
         
         try {
           const savedJobsResponse = await api.get('/jobs/saved');
+          console.log('Saved jobs data:', savedJobsResponse.data);
           setSavedJobs(savedJobsResponse.data.data || []);
         } catch (savedErr) {
           console.error('Error fetching saved jobs using api instance:', savedErr);
@@ -127,6 +129,7 @@ const SeekerDashboard = () => {
         // Fetch applications
         try {
           const applicationsResponse = await axios.get('http://localhost:5000/api/applications/me', config);
+          console.log('Applications data (axios fallback):', applicationsResponse.data);
           setApplications(applicationsResponse.data.data || []);
         } catch (appErr) {
           console.error('Error fetching applications:', appErr);
@@ -136,6 +139,7 @@ const SeekerDashboard = () => {
         // Fetch saved jobs
         try {
           const savedJobsResponse = await axios.get('http://localhost:5000/api/jobs/saved', config);
+          console.log('Saved jobs data (axios fallback):', savedJobsResponse.data);
           setSavedJobs(savedJobsResponse.data.data || []);
         } catch (savedErr) {
           console.error('Error fetching saved jobs:', savedErr);
@@ -377,13 +381,12 @@ const SeekerDashboard = () => {
                       <i className="fas fa-user-check text-purple-600"></i>
                     </div>
                   </div>
-                  <button onClick={() => setActiveTab('profile')} className="text-sm text-purple-600 mt-4 inline-block">
+                  <Link to="/profile" className="text-sm text-purple-600 mt-4 inline-block">
                     Complete profile →
-                  </button>
+                  </Link>
                 </div>
               </div>
 
-              {/* Rest of the code remains the same */}
               {/* Recommended Jobs */}
               <div className="mt-8">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Recommended Jobs</h3>
@@ -489,28 +492,274 @@ const SeekerDashboard = () => {
             </div>
           )}
 
-          {/* Rest of the tabs code remains the same */}
-          {/* ... */}
-          
-          {/* Just adding closing tags for the tabs that were in the original code */}
+          {/* Recommended Jobs Tab */}
           {activeTab === 'jobs' && (
-            /* Jobs tab content remains the same */
             <div className="p-6">
-              {/* Jobs tab content */}
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Recommended Jobs</h2>
+              
+              {recommendedJobs.length > 0 ? (
+                <div className="space-y-4">
+                  {recommendedJobs.map((job) => (
+                    <div key={job._id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+                        <div className="mb-4 md:mb-0">
+                          <h3 className="text-lg font-medium text-gray-900">{job.title}</h3>
+                          <p className="text-md text-gray-600">{job.company}</p>
+                          <div className="flex flex-wrap items-center mt-2 text-sm text-gray-500">
+                            <div className="mr-4 mb-2">
+                              <i className="fas fa-map-marker-alt mr-1"></i>
+                              <span>{job.location}</span>
+                            </div>
+                            <div className="mr-4 mb-2">
+                              <i className="fas fa-briefcase mr-1"></i>
+                              <span>{job.jobType}</span>
+                            </div>
+                            <div className="mr-4 mb-2">
+                              <i className="fas fa-money-bill-wave mr-1"></i>
+                              <span>{job.salary?.min && job.salary?.max ? `$${job.salary.min} - $${job.salary.max}` : 'Not specified'}</span>
+                            </div>
+                          </div>
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-500">{job.description?.substring(0, 150)}...</p>
+                          </div>
+                          <div className="mt-2 flex flex-wrap">
+                            {job.skills?.slice(0, 4).map((skill, index) => (
+                              <span key={index} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-2 mb-2">
+                                {skill}
+                              </span>
+                            ))}
+                            {job.skills?.length > 4 && (
+                              <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full mr-2 mb-2">
+                                +{job.skills.length - 4} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col space-y-2">
+                          <Link
+                            to={`/job/${job._id}`}
+                            className="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                          >
+                            <i className="fas fa-eye mr-2"></i> View Job
+                          </Link>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await api.post(`/jobs/saved/${job._id}`);
+                                setSavedJobs([...savedJobs, job]);
+                                setSuccessMessage('Job saved successfully!');
+                              } catch (err) {
+                                setError('Failed to save job. It may already be saved.');
+                              }
+                            }}
+                            className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                          >
+                            <i className="fas fa-bookmark mr-2"></i> Save Job
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                  <div className="mx-auto h-12 w-12 text-gray-400">
+                    <i className="fas fa-search text-2xl"></i>
+                  </div>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No jobs found</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    We couldn't find any jobs matching your profile. Try updating your skills or search for jobs manually.
+                  </p>
+                  <div className="mt-6">
+                    <Link
+                      to="/jobs/search"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      Search All Jobs
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           
+          {/* Applications Tab */}
           {activeTab === 'applications' && (
-            /* Applications tab content remains the same */
             <div className="p-6">
-              {/* Applications tab content */}
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">My Applications</h2>
+              
+              {applications.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Job
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Company
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Applied Date
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {applications.map((application) => (
+                        <tr key={application._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {application.job?.title || 'Unknown Position'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {application.job?.company || 'Unknown Company'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {new Date(application.appliedAt).toLocaleDateString()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              application.status === 'accepted' ? 'bg-green-100 text-green-800' : 
+                              application.status === 'rejected' ? 'bg-red-100 text-red-800' : 
+                              application.status === 'shortlisted' ? 'bg-blue-100 text-blue-800' :
+                              application.status === 'reviewing' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <Link 
+                              to={`/applications/${application._id}`} 
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              View Details
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                  <div className="mx-auto h-12 w-12 text-gray-400">
+                    <i className="fas fa-file-alt text-2xl"></i>
+                  </div>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No applications yet</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    You haven't applied to any jobs yet. Start exploring available positions!
+                  </p>
+                  <div className="mt-6">
+                    <Link
+                      to="/jobs/search"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      Browse Jobs
+                    </Link>
+                  </div>
+                  </div>
+              )}
             </div>
           )}
           
+          {/* Saved Jobs Tab */}
           {activeTab === 'saved' && (
-            /* Saved jobs tab content remains the same */
             <div className="p-6">
-              {/* Saved jobs tab content */}
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Saved Jobs</h2>
+              
+              {savedJobs.length > 0 ? (
+                <div className="space-y-4">
+                  {savedJobs.map((job) => (
+                    <div key={job._id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+                        <div className="mb-4 md:mb-0">
+                          <h3 className="text-lg font-medium text-gray-900">{job.title}</h3>
+                          <p className="text-md text-gray-600">{job.company}</p>
+                          <div className="flex flex-wrap items-center mt-2 text-sm text-gray-500">
+                            <div className="mr-4 mb-2">
+                              <i className="fas fa-map-marker-alt mr-1"></i>
+                              <span>{job.location}</span>
+                            </div>
+                            <div className="mr-4 mb-2">
+                              <i className="fas fa-briefcase mr-1"></i>
+                              <span>{job.jobType}</span>
+                            </div>
+                            <div className="mr-4 mb-2">
+                              <i className="fas fa-money-bill-wave mr-1"></i>
+                              <span>{job.salary?.min && job.salary?.max ? `$${job.salary.min} - $${job.salary.max}` : 'Not specified'}</span>
+                            </div>
+                          </div>
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-500">{job.description?.substring(0, 150)}...</p>
+                          </div>
+                          <div className="mt-2 flex flex-wrap">
+                            {job.skills?.slice(0, 4).map((skill, index) => (
+                              <span key={index} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-2 mb-2">
+                                {skill}
+                              </span>
+                            ))}
+                            {job.skills?.length > 4 && (
+                              <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full mr-2 mb-2">
+                                +{job.skills.length - 4} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col space-y-2">
+                          <Link
+                            to={`/job/${job._id}`}
+                            className="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                          >
+                            <i className="fas fa-eye mr-2"></i> View Job
+                          </Link>
+                          <Link
+                            to={`/apply/${job._id}`}
+                            className="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+                          >
+                            <i className="fas fa-paper-plane mr-2"></i> Apply Now
+                          </Link>
+                          <button
+                            onClick={() => handleRemoveFromSaved(job._id)}
+                            className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
+                          >
+                            <i className="fas fa-trash-alt mr-2"></i> Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                  <div className="mx-auto h-12 w-12 text-gray-400">
+                    <i className="fas fa-bookmark text-2xl"></i>
+                  </div>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No saved jobs</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    You haven't saved any jobs yet. Browse jobs and save the ones you're interested in.
+                  </p>
+                  <div className="mt-6">
+                    <Link
+                      to="/jobs/search"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      Browse Jobs
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           

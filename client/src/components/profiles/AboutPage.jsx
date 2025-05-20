@@ -2,6 +2,29 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { motion } from 'framer-motion';
+import { FaHandshake, FaLightbulb, FaUsers, FaMapMarkerAlt, FaEnvelope, FaPhone } from 'react-icons/fa';
+import { AiOutlineLoading3Quarters } from 'react-icons/ai';
+
+// Animation variants
+const fadeIn = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.6 }
+  }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2
+    }
+  }
+};
 
 const AboutPage = () => {
   const [stats, setStats] = useState({
@@ -69,45 +92,87 @@ const AboutPage = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Hero Section */}
-      <div className="bg-blue-600 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Hero Section with Gradient Background */}
+      <div className="bg-gradient-to-r from-blue-700 to-indigo-600 text-black py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-pattern opacity-10"></div>
+        <motion.div 
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4">About Us</h1>
-            <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-              Connecting talent with opportunity and helping companies find their perfect match
-            </p>
+            <motion.h1 
+              className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+            >
+              About Us
+            </motion.h1>
+            <motion.p 
+              className="text-xl md:text-2xl text-blue-600 max-w-3xl mx-auto font-medium"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+            >
+              Connecting talent with opportunity and helping you ace your interviews
+            </motion.p>
           </div>
+        </motion.div>
+        
+        {/* Animated wave SVG at bottom of hero */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="w-full">
+            <path fill="#F9FAFB" fillOpacity="1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,149.3C960,160,1056,160,1152,138.7C1248,117,1344,75,1392,53.3L1440,32L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+          </svg>
         </div>
       </div>
 
       {/* Our Mission */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Our Mission</h2>
+      <motion.div 
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={fadeIn}
+      >
+        <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100 transform transition-all hover:shadow-xl">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center relative">
+            Our Mission
+            <div className="h-1 w-24 bg-blue-600 absolute bottom-0 left-1/2 transform -translate-x-1/2 mt-2 rounded-full"></div>
+          </h2>
           <div className="max-w-3xl mx-auto">
-            <p className="text-lg text-gray-600 mb-6">
-              At JobPortal, we believe that the right job can change a person's life, and the right 
-              talent can transform a business. Our mission is to create meaningful connections 
-              between job seekers and employers, making the hiring process more efficient, 
-              transparent, and successful for everyone involved.
+            <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+              As a student completing my final year project, I witnessed firsthand how many of my fellow graduates struggled 
+              to find jobs and navigate the intimidating world of professional interviews. This inspired me to create 
+              AslanAI – a platform that not only connects talented individuals with employment 
+              opportunities but also helps them prepare for real-world interviews.
             </p>
-            <p className="text-lg text-gray-600">
-              We're committed to developing innovative tools and resources that empower job seekers 
-              to showcase their skills and find opportunities that match their ambitions, while 
-              helping employers discover exceptional talent that drives their business forward.
+            <p className="text-lg text-gray-600 leading-relaxed">
+              My mission with this project is twofold: to bridge the gap between job seekers and employers, and to 
+              equip fresh graduates with the confidence and skills they need to succeed in interviews. By simulating 
+              realistic interview environments and providing a comprehensive job portal, I aim to make the transition 
+              from student to professional smoother and more accessible for everyone.
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Stats Section */}
-      <div className="bg-gray-100 py-16">
+      {/* Stats Section with Counter Animation */}
+      <div className="bg-gray-100 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">Our Impact</h2>
+          <motion.h2 
+            className="text-3xl font-bold text-gray-900 mb-12 text-center"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+          >
+            Our Impact
+          </motion.h2>
           
           {error && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 max-w-3xl mx-auto">
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 max-w-3xl mx-auto rounded-r-md">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -121,184 +186,259 @@ const AboutPage = () => {
             </div>
           )}
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="text-4xl font-bold text-blue-600 mb-2">
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            <motion.div 
+              className="bg-white p-8 rounded-lg shadow-md transform transition-all hover:shadow-xl hover:scale-105 border border-gray-100"
+              variants={fadeIn}
+            >
+              <div className="text-5xl font-bold text-blue-600 mb-4">
                 {loading ? (
-                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                  <AiOutlineLoading3Quarters className="animate-spin mx-auto h-10 w-10 text-blue-600" />
                 ) : (
-                  new Intl.NumberFormat().format(stats.jobsCount)
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 1 }}
+                  >
+                    {new Intl.NumberFormat().format(stats.jobsCount)}
+                  </motion.span>
                 )}
               </div>
-              <div className="text-gray-600 font-medium">Jobs Posted</div>
-            </div>
+              <div className="text-gray-700 font-medium">Jobs Posted</div>
+            </motion.div>
             
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="text-4xl font-bold text-blue-600 mb-2">
+            <motion.div 
+              className="bg-white p-8 rounded-lg shadow-md transform transition-all hover:shadow-xl hover:scale-105 border border-gray-100" 
+              variants={fadeIn}
+            >
+              <div className="text-5xl font-bold text-blue-600 mb-4">
                 {loading ? (
-                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                  <AiOutlineLoading3Quarters className="animate-spin mx-auto h-10 w-10 text-blue-600" />
                 ) : (
-                  new Intl.NumberFormat().format(stats.employersCount)
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 1 }}
+                  >
+                    {new Intl.NumberFormat().format(stats.employersCount)}
+                  </motion.span>
                 )}
               </div>
-              <div className="text-gray-600 font-medium">Companies</div>
-            </div>
+              <div className="text-gray-700 font-medium">Companies</div>
+            </motion.div>
             
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="text-4xl font-bold text-blue-600 mb-2">
+            <motion.div 
+              className="bg-white p-8 rounded-lg shadow-md transform transition-all hover:shadow-xl hover:scale-105 border border-gray-100"
+              variants={fadeIn}
+            >
+              <div className="text-5xl font-bold text-blue-600 mb-4">
                 {loading ? (
-                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                  <AiOutlineLoading3Quarters className="animate-spin mx-auto h-10 w-10 text-blue-600" />
                 ) : (
-                  new Intl.NumberFormat().format(stats.jobSeekersCount)
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 1 }}
+                  >
+                    {new Intl.NumberFormat().format(stats.jobSeekersCount)}
+                  </motion.span>
                 )}
               </div>
-              <div className="text-gray-600 font-medium">Job Seekers</div>
-            </div>
+              <div className="text-gray-700 font-medium">Job Seekers</div>
+            </motion.div>
             
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="text-4xl font-bold text-blue-600 mb-2">
+            <motion.div 
+              className="bg-white p-8 rounded-lg shadow-md transform transition-all hover:shadow-xl hover:scale-105 border border-gray-100"
+              variants={fadeIn}
+            >
+              <div className="text-5xl font-bold text-blue-600 mb-4">
                 {loading ? (
-                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                  <AiOutlineLoading3Quarters className="animate-spin mx-auto h-10 w-10 text-blue-600" />
                 ) : (
-                  new Intl.NumberFormat().format(stats.applicationsCount)
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 1 }}
+                  >
+                    {new Intl.NumberFormat().format(stats.applicationsCount)}
+                  </motion.span>
                 )}
               </div>
-              <div className="text-gray-600 font-medium">Applications</div>
-            </div>
-          </div>
+              <div className="text-gray-700 font-medium">Applications</div>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
 
       {/* Our Story */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Our Story</h2>
+      <motion.div 
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={fadeIn}
+      >
+        <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center relative">
+          My Story
+          <div className="h-1 w-20 bg-blue-600 absolute bottom-0 left-1/2  transform -translate-x-1/2 mt-2 rounded-full"></div>
+        </h2>
         <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <img src="/images/about-story.jpg" alt="Our journey" className="rounded-lg shadow-md w-full" />
-          </div>
-          <div>
-            <p className="text-lg text-gray-600 mb-6">
-              JobPortal was founded in 2021 by Sarah Johnson and Michael Chen, who recognized the 
-              need for a more efficient and effective job matching platform in the wake of rapidly 
-              changing work environments.
+          <motion.div 
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="order-2 md:order-1"
+          >
+            <img 
+              src="https://static.vecteezy.com/system/resources/previews/023/891/742/non_2x/story-telling-button-speech-bubble-banner-label-storytelling-vector.jpg" 
+              alt="Our journey" 
+              className="rounded-xl shadow-xl w-full hover:shadow-2xl transition-shadow duration-300 object-cover h-full" 
+            />
+          </motion.div>
+          <motion.div 
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            viewport={{ once: true }}
+            className="order-1 md:order-2"
+          >
+            <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+              I created this platform in 2023 as my final year project, driven by my own experiences and observations as a student. 
+              I noticed many of my peers struggling with two major challenges: finding relevant job opportunities and 
+              feeling unprepared for professional interviews.
             </p>
-            <p className="text-lg text-gray-600 mb-6">
-              Having experienced the challenges of hiring and job searching firsthand, they set out to 
-              create a solution that would address the pain points on both sides of the employment 
-              equation.
+            <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+              The idea sparked when I saw how nervous my classmates were before interviews and how many missed opportunities 
+              resulted from lack of interview experience and preparation. I wanted to solve this by creating a platform where 
+              freshers could not only find jobs but also practice interviewing in a realistic setting with AI technology.
             </p>
-            <p className="text-lg text-gray-600">
-              What started as a small project has grown into a thriving platform used by thousands of 
-              companies and job seekers worldwide. We continue to evolve our platform based on user 
-              feedback and industry trends, always with our core mission in mind: connecting the right 
-              people with the right opportunities.
+            <p className="text-lg text-gray-600 leading-relaxed">
+              What began as an academic project has evolved into a practical solution that addresses real-world challenges 
+              for new graduates. By combining a job portal with AI interview simulation, I've created a comprehensive tool 
+              that helps bridge the gap between education and employment for fresh talent entering the workforce.
             </p>
-          </div>
+          </motion.div>
         </div>
-      </div>
-
-      {/* Team Section */}
-      <div className="bg-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">Meet Our Team</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {teamMembers.map((member, index) => (
-              <div key={index} className="bg-gray-50 rounded-lg overflow-hidden shadow-md transition hover:shadow-lg">
-                <div className="h-64 bg-gray-200">
-                  {member.image ? (
-                    <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-blue-100">
-                      <span className="text-5xl font-bold text-blue-600">
-                        {member.name.charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-6">
-                  <h3 className="font-bold text-xl text-gray-900">{member.name}</h3>
-                  <p className="text-blue-600 mb-3">{member.title}</p>
-                  <p className="text-gray-600">{member.bio}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      </motion.div>
 
       {/* Values Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">Our Values</h2>
+      <motion.div 
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 bg-gradient-to-b from-white to-gray-50 rounded-3xl my-8"
+        initial="hidden" 
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={staggerContainer}
+      >
+        <h2 className="text-3xl font-bold text-gray-900 mb-16 text-center relative">
+          Our Values
+          <div className="h-1 w-20 bg-blue-600 absolute bottom-0 left-1/2 transform -translate-x-1/2 mt-2 rounded-full"></div>
+        </h2>
         <div className="grid md:grid-cols-3 gap-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <i className="fas fa-handshake text-2xl text-blue-600"></i>
+          <motion.div 
+            className="bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-500 transform transition-all hover:shadow-xl hover:-translate-y-2"
+            variants={fadeIn}
+          >
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FaHandshake className="text-3xl text-blue-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3 text-center">Integrity</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Integrity</h3>
             <p className="text-gray-600 text-center">
               We believe in honesty, transparency, and ethical practices in everything we do. We're committed to building trust with our users and partners.
             </p>
-          </div>
+          </motion.div>
           
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <i className="fas fa-lightbulb text-2xl text-blue-600"></i>
+          <motion.div 
+            className="bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-500 transform transition-all hover:shadow-xl hover:-translate-y-2" 
+            variants={fadeIn}
+          >
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FaLightbulb className="text-3xl text-blue-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3 text-center">Innovation</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Innovation</h3>
             <p className="text-gray-600 text-center">
               We continuously strive to improve our platform and services, embracing new technologies and ideas to provide the best possible experience.
             </p>
-          </div>
+          </motion.div>
           
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <i className="fas fa-users text-2xl text-blue-600"></i>
+          <motion.div 
+            className="bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-500 transform transition-all hover:shadow-xl hover:-translate-y-2"
+            variants={fadeIn}
+          >
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FaUsers className="text-3xl text-blue-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3 text-center">Inclusion</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Inclusion</h3>
             <p className="text-gray-600 text-center">
               We're dedicated to creating a platform that's accessible and beneficial to everyone, regardless of background, promoting diversity in the workplace.
             </p>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* CTA Section */}
-      <div className="bg-blue-600 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-6">Join Our Community Today</h2>
-          <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
-            Whether you're looking for your next career move or searching for top talent, we're here to help you succeed.
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-pattern opacity-10"></div>
+        <motion.div 
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to Get Started?</h2>
+          <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-10">
+            Whether you're looking for your next career move or preparing for interviews, we're here to help you succeed.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link 
-              to="/register?type=seeker" 
-              className="bg-white text-blue-600 hover:bg-gray-50 transition font-medium py-3 px-8 rounded-lg shadow-md"
-            >
-              Create Job Seeker Account
-            </Link>
-            <Link 
-              to="/register?type=employer" 
-              className="bg-blue-800 text-white hover:bg-blue-900 transition font-medium py-3 px-8 rounded-lg shadow-md"
-            >
-              Create Employer Account
-            </Link>
+          <div className="flex flex-col sm:flex-row justify-center gap-6">
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link 
+                to="/register?type=seeker" 
+                className="bg-white text-blue-600 hover:bg-gray-50 transition-all font-medium py-4 px-8 rounded-full shadow-lg inline-block"
+              >
+                Start as Job Seeker
+              </Link>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link 
+                to="/register?type=employer" 
+                className="bg-blue-900 text-white hover:bg-blue-800 transition-all font-medium py-4 px-8 rounded-full shadow-lg inline-block border border-blue-400"
+              >
+                Start as Employer
+              </Link>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Contact Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">Contact Us</h2>
+      <motion.div 
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={fadeIn}
+      >
+        <h2 className="text-3xl font-bold text-gray-900 mb-16 text-center relative">
+          Contact Us
+          <div className="h-1 w-20 bg-blue-600 absolute bottom-0 left-1/2 transform -translate-x-1/2 mt-2 rounded-full"></div>
+        </h2>
         <div className="grid md:grid-cols-2 gap-12">
-          <div>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Get In Touch</h3>
-            <p className="text-gray-600 mb-6">
-              Have questions or feedback? We'd love to hear from you. Our support team is always here to help.
+          <div className="bg-white p-8 rounded-xl shadow-lg">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Get In Touch</h3>
+            <p className="text-gray-600 mb-8">
+              Have questions or feedback? I'd love to hear from you. The support team is always here to help with any questions about the platform.
             </p>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-start">
                 <div className="flex-shrink-0 mt-1">
-                  <i className="fas fa-map-marker-alt text-blue-600"></i>
+                  <FaMapMarkerAlt className="text-blue-600 text-xl" />
                 </div>
                 <div className="ml-4">
                   <p className="text-gray-900 font-medium">Address</p>
@@ -307,7 +447,7 @@ const AboutPage = () => {
               </div>
               <div className="flex items-start">
                 <div className="flex-shrink-0 mt-1">
-                  <i className="fas fa-envelope text-blue-600"></i>
+                  <FaEnvelope className="text-blue-600 text-xl" />
                 </div>
                 <div className="ml-4">
                   <p className="text-gray-900 font-medium">Email</p>
@@ -316,7 +456,7 @@ const AboutPage = () => {
               </div>
               <div className="flex items-start">
                 <div className="flex-shrink-0 mt-1">
-                  <i className="fas fa-phone text-blue-600"></i>
+                  <FaPhone className="text-blue-600 text-xl" />
                 </div>
                 <div className="ml-4">
                   <p className="text-gray-900 font-medium">Phone</p>
@@ -326,64 +466,89 @@ const AboutPage = () => {
             </div>
           </div>
           <div>
-            <form className="bg-white rounded-lg shadow-md p-6">
-              <div className="grid grid-cols-2 gap-4 mb-4">
+            <motion.form 
+              className="bg-white rounded-xl shadow-lg p-8 border border-gray-100"
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                     Name
                   </label>
                   <input
                     type="text"
                     id="name"
-                    className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     placeholder="Your name"
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                     Email
                   </label>
                   <input
                     type="email"
                     id="email"
-                    className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     placeholder="Your email"
                     required
                   />
                 </div>
               </div>
-              <div className="mb-4">
-                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="mb-6">
+                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
                   Subject
                 </label>
                 <input
                   type="text"
                   id="subject"
-                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   placeholder="Subject of your message"
                   required
                 />
               </div>
-              <div className="mb-4">
-                <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="mb-6">
+                <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
                   Message
                 </label>
                 <textarea
                   id="message"
-                  rows="4"
-                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows="5"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   placeholder="Your message"
                   required
                 ></textarea>
               </div>
-              <button
+              <motion.button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 Send Message
-              </button>
-            </form>
+              </motion.button>
+            </motion.form>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Footer with subtle wave top */}
+      <div className="bg-gray-900 text-white mt-16 relative">
+        <div className="absolute top-0 left-0 right-0 transform -translate-y-full">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+            <path fill="#111827" fillOpacity="1" d="M0,96L48,128C96,160,192,224,288,224C384,224,480,160,576,149.3C672,139,768,181,864,186.7C960,192,1056,160,1152,149.3C1248,139,1344,149,1392,154.7L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+          </svg>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center">
+            <p className="text-gray-400 text-sm">
+              &copy; {new Date().getFullYear()} AiInterviewMocker & JobPortal. All rights reserved.
+            </p>
           </div>
         </div>
       </div>

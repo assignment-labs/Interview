@@ -1,7 +1,8 @@
-// src/components/jobs/JobDetailPage.jsx
+// src/pages/jobs/JobDetailPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import authHelpers from '../../utils/authHelpers';
 
 const JobDetailPage = () => {
   const { id } = useParams();
@@ -11,81 +12,110 @@ const JobDetailPage = () => {
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [saveInProgress, setSaveInProgress] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    // Get authenticated user
+    const currentUser = authHelpers.getCurrentUser();
+    setUser(currentUser);
 
+    // Setup auth token
+    authHelpers.setupAuthToken();
+
+    // Fetch job details and saved status
     fetchJobDetails();
-    checkIfJobIsSaved();
+    if (currentUser) {
+      checkIfJobIsSaved();
+    }
   }, [id]);
 
   const fetchJobDetails = async () => {
     try {
-      // Use relative URL instead of hardcoded URL
-      const response = await axios.get(`http://localhost:5000/api/jobs/${id}`);
+      const config = authHelpers.getAuthConfig();
+      const response = await axios.get(`http://localhost:5000/api/jobs/${id}`, config);
       
       if (response.data.success) {
         setJob(response.data.data);
       }
     } catch (err) {
+      console.error('Error fetching job details:', err);
       setError(err.response?.data?.message || 'Error fetching job details. Please try again.');
+      
+      // Handle auth errors
+      authHelpers.handleAuthError(err, navigate);
     } finally {
       setLoading(false);
     }
   };
 
   const checkIfJobIsSaved = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!user) return;
 
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
-
-      // Use relative URL
+      const config = authHelpers.getAuthConfig();
       const response = await axios.get('http://localhost:5000/api/jobs/saved', config);
       
       if (response.data.success) {
-        const saved = response.data.data.some(savedJob => savedJob._id === id);
-        setIsSaved(saved);
+        // Extract just the job IDs from the saved jobs list
+        const savedJobIds = response.data.data.map(job => job._id);
+        // Check if the current job ID is in the list
+        setIsSaved(savedJobIds.includes(id));
       }
     } catch (err) {
       console.error('Error checking saved status:', err);
+      
+      // Handle auth errors
+      authHelpers.handleAuthError(err, navigate);
     }
   };
 
+  // Save/unsave job
   const handleSaveJob = async () => {
     if (!user) {
       navigate('/login');
       return;
     }
 
-    const token = localStorage.getItem('token');
-    
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
+      setSaveInProgress(true);
+      
+      // Toggle the UI state for immediate feedback
+      const newSavedState = !isSaved;
+      setIsSaved(newSavedState);
 
-      if (isSaved) {
-        // Remove from saved jobs - use relative URL
-        await axios.delete(`http://localhost:5000/api/jobs/saved/${id}`, config);
-        setIsSaved(false);
-      } else {
-        // Add to saved jobs - use relative URL
+      // Setup auth config
+      const config = authHelpers.getAuthConfig();
+
+      if (newSavedState) {
+        // Save the job
         await axios.post(`http://localhost:5000/api/jobs/saved/${id}`, {}, config);
-        setIsSaved(true);
+        console.log('Job saved successfully');
+      } else {
+        // Unsave the job
+        await axios.delete(`http://localhost:5000/api/jobs/saved/${id}`, config);
+        console.log('Job unsaved successfully');
       }
     } catch (err) {
       console.error('Error saving/unsaving job:', err);
+      
+      // Revert the UI state if the API call failed
+      setIsSaved(isSaved); // Revert to the previous state
+      
+      // Show error message
+      setError(err.response?.data?.message || 'Failed to update saved status. Please try again.');
+      setTimeout(() => setError(''), 5000);
+      
+      // If the error is "already saved" and we were trying to save, update the UI
+      if (err.response?.status === 400 && 
+          err.response?.data?.message === 'Job is already saved' &&
+          !isSaved) {
+        setIsSaved(true);
+      }
+      
+      // Handle auth errors
+      authHelpers.handleAuthError(err, navigate);
+    } finally {
+      setSaveInProgress(false);
     }
   };
 
@@ -103,7 +133,7 @@ const JobDetailPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="spinner">Loading...</div>
+        <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent border-solid rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -147,6 +177,20 @@ const JobDetailPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <i className="fas fa-exclamation-circle text-red-500"></i>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
           {/* Job Header */}
           <div className="bg-blue-600 text-white p-6">
@@ -167,14 +211,21 @@ const JobDetailPage = () => {
                 </div>
               </div>
               <div className="flex space-x-3">
-                <button
-                  onClick={handleSaveJob}
-                  className={`flex items-center justify-center h-10 w-10 rounded-full ${
-                    isSaved ? 'bg-white text-blue-600' : 'bg-blue-500 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  <i className={`fas fa-bookmark ${isSaved ? 'text-blue-600' : 'text-white'}`}></i>
-                </button>
+                {user && (
+                  <button
+                    onClick={handleSaveJob}
+                    disabled={saveInProgress}
+                    className={`flex items-center justify-center h-10 w-10 rounded-full ${
+                      isSaved ? 'bg-white text-blue-600' : 'bg-blue-500 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    {saveInProgress ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    ) : (
+                      <i className={`fas fa-bookmark ${isSaved ? 'text-blue-600' : 'text-white'}`}></i>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
             
@@ -223,19 +274,21 @@ const JobDetailPage = () => {
             </div>
             
             {/* Required Skills */}
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Required Skills</h2>
-              <div className="flex flex-wrap gap-2">
-                {job.skills.map((skill, index) => (
-                  <span
-                    key={index}
-                    className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
-                  >
-                    {skill}
-                  </span>
-                ))}
+            {job.skills && job.skills.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Required Skills</h2>
+                <div className="flex flex-wrap gap-2">
+                  {job.skills.map((skill, index) => (
+                    <span
+                      key={index}
+                      className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
             
             {/* Company Information */}
             {job.employer && (
